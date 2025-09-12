@@ -1,0 +1,33 @@
+# Arquivos gerados pelo Dart e Flutter.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Arquivos de configuração de IDEs.
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Arquivos específicos de plataformas.
+/android/app/src/main/assets/flutter_assets/
+/android/app/build/
+/android/build/
+/android/.gradle/
+/android/local.properties
+/ios/Pods/
+/ios/Flutter/App.framework
+/ios/Flutter/engine
+/ios/Flutter/flutter_assets/
+/ios/Flutter/ephemeral/
+/ios/Runner/GeneratedPluginRegistrant.h
+/ios/Runner/GeneratedPluginRegistrant.m
+
+# Outros.
+*.log
+*.DS_Store
