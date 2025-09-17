@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../theme/custom_colors.dart';
-import 'activity_screen.dart';
-import 'workout_screen.dart';
 import 'challenges_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -42,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Scaffold é a estrutura base da tela, fornecendo appBar, body, etc.
     return Scaffold(
       // Define a cor de fundo da tela para um tom de cinza escuro.
-      backgroundColor: CustomColors.tertiary,
+      backgroundColor: CustomColors.secondary,
       // SafeArea garante que o conteúdo não seja obstruído por elementos da interface do sistema (como o notch do celular).
       body: SafeArea(
         // SingleChildScrollView permite que o conteúdo da tela seja rolável se exceder o tamanho da tela.
@@ -78,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         'Fitness Freak',
                         style: GoogleFonts.lexend(
-                          color: CustomColors.textLight.withOpacity(0.7),
+                          color: CustomColors.textDark.withOpacity(0.7),
                           fontSize: 12,
                         ),
                       ),
@@ -137,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'Desafios Conquistados',
                       style: GoogleFonts.lexend(
-                        color: CustomColors.textLight,
+                        color: CustomColors.textDark,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -147,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       '(4)',
                       style: GoogleFonts.lexend(
-                        color: CustomColors.textLight.withOpacity(0.7),
+                        color: CustomColors.textDark.withOpacity(0.7),
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -157,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Ícone de seta para indicar que a seção é navegável.
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: CustomColors.textLight,
+                  color: CustomColors.textDark,
                   size: 16,
                 ),
               ],
@@ -205,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Text(
           label,
           style: GoogleFonts.lexend(
-            color: CustomColors.textLight,
+            color: CustomColors.textDark,
             fontSize: 10,
           ),
           textAlign: TextAlign.center,
@@ -289,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             title,
             style: GoogleFonts.lexend(
-              color: Colors.white,
+              color: CustomColors.textDark,
               fontSize: 20,
               fontWeight: FontWeight.w600,
             ),
@@ -298,8 +296,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             value,
             style: GoogleFonts.lexend(
-              color: Colors.white,
-              fontSize: 10,
+              color: CustomColors.textDark.withOpacity(0.7),
+              fontSize: 08,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -342,18 +340,18 @@ class _HomeScreenState extends State<HomeScreen> {
           formatButtonVisible: false,
           titleCentered: true,
           titleTextStyle: GoogleFonts.lexend(
-            color: CustomColors.textLight,
+            color: CustomColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
           leftChevronIcon: const Icon(
             Icons.arrow_back_ios,
-            color: CustomColors.textLight,
+            color: CustomColors.textDark,
             size: 16,
           ),
           rightChevronIcon: const Icon(
             Icons.arrow_forward_ios,
-            color: CustomColors.textLight,
+            color: CustomColors.textDark,
             size: 16,
           ),
         ),
@@ -361,17 +359,17 @@ class _HomeScreenState extends State<HomeScreen> {
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
           defaultTextStyle: TextStyle(
-            color: CustomColors.textLight.withOpacity(0.7),
+            color: CustomColors.textDark.withOpacity(0.7),
           ),
           weekendTextStyle: TextStyle(
-            color: CustomColors.textLight.withOpacity(0.7),
+            color: CustomColors.textDark.withOpacity(0.7),
           ),
           todayDecoration: const BoxDecoration(
             color: Colors.transparent,
             shape: BoxShape.circle,
           ),
           todayTextStyle: const TextStyle(
-            color: CustomColors.textLight,
+            color: CustomColors.textDark,
             fontWeight: FontWeight.bold,
           ),
           selectedDecoration: const BoxDecoration(
@@ -385,8 +383,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         // Estilização dos nomes dos dias da semana (Seg, Ter, Qua...).
         daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(color: CustomColors.textLight),
-          weekendStyle: TextStyle(color: CustomColors.textLight),
+          weekdayStyle: TextStyle(color: CustomColors.textDark),
+          weekendStyle: TextStyle(color: CustomColors.textDark),
         ),
         // `calendarBuilders` permite construir widgets customizados para dias específicos.
         calendarBuilders: CalendarBuilders(
@@ -402,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Exibe um ícone de corrida no dia de hoje.
                 child: const Icon(
                   Icons.directions_run,
-                  color: CustomColors.primary,
+                  color: CustomColors.tertiary,
                   size: 18,
                 ),
               ),

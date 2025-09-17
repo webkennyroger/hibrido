@@ -5,7 +5,6 @@ import 'package:hibrido/screens/profile_screen.dart';
 import '../../theme/custom_colors.dart';
 import 'home_screen.dart';
 import 'activity_screen.dart';
-import 'workout_screen.dart';
 
 class AppScreen extends StatefulWidget {
   const AppScreen({Key? key}) : super(key: key);
@@ -28,13 +27,7 @@ class _AppScreenState extends State<AppScreen> {
     _screens = [
       const HomeScreen(),
       const ActivityScreen(),
-      const WorkoutScreen(),
-      // Passamos a função que muda o índice de volta para 0 (HomeScreen).
-      ProfileScreen(
-        onBack: () {
-          setState(() => _selectedIndex = 0);
-        },
-      ),
+      const ProfileScreen(),
     ];
   }
 
@@ -80,12 +73,8 @@ class _AppScreenState extends State<AppScreen> {
                 _buildNavItem(Icons.home_outlined, 0), // Item para HomeScreen
                 _buildNavItem(Icons.bar_chart, 1), // Item para ActivityScreen
                 _buildNavItem(
-                  Icons.fitness_center,
-                  2,
-                ), // Item para WorkoutScreen
-                _buildNavItem(
                   Icons.person_outline,
-                  3,
+                  2,
                 ), // Item para ProfileScreen
               ],
             ),

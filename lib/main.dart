@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hibrido/screens/app_screen.dart';
-import 'package:hibrido/screens/map_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'theme/custom_colors.dart';
 
@@ -19,7 +18,7 @@ class MyApp extends StatelessWidget {
       title: 'Fitness App',
       theme: ThemeData(
         primaryColor: CustomColors.primary,
-        scaffoldBackgroundColor: CustomColors.primary,
+        scaffoldBackgroundColor: CustomColors.secondary,
         colorScheme: ColorScheme.fromSeed(
           seedColor: CustomColors.primary,
           brightness: Brightness.dark,

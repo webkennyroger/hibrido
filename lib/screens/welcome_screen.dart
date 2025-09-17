@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hibrido/screens/home_screen.dart';
 import '../../theme/custom_colors.dart';
 import 'app_screen.dart';
 
@@ -126,7 +125,7 @@ class WelcomeScreen extends StatelessWidget {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const HomeScreen(),
+                            builder: (context) => const AppScreen(),
                           ),
                         );
                       },

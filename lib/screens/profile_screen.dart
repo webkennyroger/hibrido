@@ -3,9 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/custom_colors.dart';
 
 class ProfileScreen extends StatelessWidget {
-  final VoidCallback onBack;
-
-  const ProfileScreen({Key? key, required this.onBack}) : super(key: key);
+  const ProfileScreen({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,9 +26,7 @@ class ProfileScreen extends StatelessWidget {
                         Icons.arrow_back_ios,
                         color: Colors.black,
                       ),
-                      onPressed: () {
-                        onBack();
-                      },
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
                     IconButton(
                       icon: const Icon(Icons.edit_note, color: Colors.black),

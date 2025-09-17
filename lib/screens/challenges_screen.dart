@@ -72,7 +72,7 @@ class ChallengesScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: CustomColors.card,
+        color: CustomColors.quinary, // Alterado para fundo claro
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
@@ -81,12 +81,16 @@ class ChallengesScreen extends StatelessWidget {
           // Linha superior com o ícone e a data da corrida.
           Row(
             children: [
-              const Icon(Icons.directions_run, color: Colors.white, size: 16),
+              const Icon(
+                Icons.directions_run,
+                color: CustomColors.textDark,
+                size: 16,
+              ),
               const SizedBox(width: 8),
               Text(
                 date,
                 style: GoogleFonts.lexend(
-                  color: CustomColors.textLight,
+                  color: CustomColors.textDark,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -116,7 +120,7 @@ class ChallengesScreen extends StatelessWidget {
         Text(
           value,
           style: GoogleFonts.lexend(
-            color: CustomColors.textLight,
+            color: CustomColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -125,7 +129,7 @@ class ChallengesScreen extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.lexend(
-            color: CustomColors.textLight.withOpacity(0.7),
+            color: CustomColors.textDark.withOpacity(0.7),
             fontSize: 12,
           ),
         ),
@@ -509,17 +513,20 @@ class ChallengesScreen extends StatelessWidget {
       length: 3,
       // Scaffold é a estrutura principal da tela.
       child: Scaffold(
-        backgroundColor: CustomColors.primary,
+        backgroundColor:
+            CustomColors.tertiary, // Alterado para fundo escuro padrão
         // AppBar contém o título e a barra de abas.
         appBar: AppBar(
           title: Text(
             'Desafios e Conquistas',
             style: GoogleFonts.lexend(
-              color: CustomColors.textLight,
+              color: CustomColors
+                  .textLight, // Mantém o texto claro no appbar escuro
               fontWeight: FontWeight.bold,
             ),
           ),
-          backgroundColor: CustomColors.primary,
+          backgroundColor:
+              CustomColors.tertiary, // Alterado para fundo escuro padrão
           elevation: 0,
           bottom: TabBar(
             // Estilização da barra de abas.
