@@ -1,14 +1,18 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hibrido/models/activity_data.dart';
+import '../components/media_player.dart';
+import '../services/spotify_service.dart';
 import '../theme/custom_colors.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/activity_detail_screen.dart';
+import 'package:spotify_sdk/spotify_sdk.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
@@ -17,7 +21,6 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-// Enum para controlar o estado da atividade de forma clara.
 enum ActivityState { notStarted, running, paused, finished }
 
 class _MapScreenState extends State<MapScreen> {
@@ -27,10 +30,8 @@ class _MapScreenState extends State<MapScreen> {
   bool _isGpsOn = false;
   final Set<Polyline> _polylines = {};
 
-  // A variável de estado principal que controla a UI dos botões.
   ActivityState _activityState = ActivityState.notStarted;
 
-  // Variáveis para rastreamento da atividade
   final Stopwatch _stopwatch = Stopwatch();
   Timer? _timer;
   String _durationText = '00:00';
@@ -38,6 +39,15 @@ class _MapScreenState extends State<MapScreen> {
   double _caloriesBurned = 0.0;
   final List<LatLng> _routePoints = [];
   StreamSubscription<Position>? _positionStreamSubscription;
+  StreamSubscription? _playerStateSubscription;
+
+  bool _isPlayerVisible = false;
+
+  final SpotifyService _spotifyService = SpotifyService();
+  String _trackName = 'Nenhuma música';
+  String _artistName = 'Conecte-se ao Spotify';
+  bool _isMusicPlaying = false;
+  bool _isSpotifyConnected = false;
 
   @override
   void initState() {
@@ -45,18 +55,97 @@ class _MapScreenState extends State<MapScreen> {
     _checkGpsStatus();
     _listenToGpsStatusChanges();
     _getCurrentLocation();
+    _listenToSpotifyPlayerState(); // Novo método para ouvir o player
   }
 
   @override
   void dispose() {
-    // Limpa os recursos para evitar vazamento de memória.
     _timer?.cancel();
     _positionStreamSubscription?.cancel();
+    _playerStateSubscription?.cancel(); // Cancela a inscrição do listener
     _mapController?.dispose();
     super.dispose();
   }
 
-  // Verifica o status inicial do serviço de GPS.
+  // Novo método para ouvir as mudanças de estado do player do Spotify
+  void _listenToSpotifyPlayerState() {
+    _playerStateSubscription = SpotifySdk.subscribePlayerState().listen((
+      playerState,
+    ) {
+      if (mounted) {
+        setState(() {
+          _isMusicPlaying = playerState.isPaused != null
+              ? !playerState.isPaused!
+              : false;
+          _trackName = playerState.track?.name ?? 'Música desconhecida';
+          _artistName =
+              playerState.track?.artist.name ?? 'Artista desconhecido';
+        });
+      }
+    });
+  }
+
+  Future<void> _connectToSpotify() async {
+    final isConnected = await _spotifyService.initializeAndAuthenticate();
+    if (mounted) {
+      setState(() {
+        _isSpotifyConnected = isConnected;
+        if (isConnected) {
+          _artistName = 'Conectado!';
+          _startPlaylist();
+        } else {
+          _artistName = 'Falha na conexão';
+        }
+      });
+    }
+  }
+
+  // O método _updatePlayerState não é mais necessário, pois o listener faz isso
+  // de forma mais eficiente. No entanto, é bom mantê-lo para chamadas pontuais.
+  Future<void> _updatePlayerState() async {
+    final trackInfo = await _spotifyService.getCurrentTrack();
+    if (mounted && trackInfo != null) {
+      setState(() {
+        _trackName = trackInfo['name'] ?? 'Música desconhecida';
+        _artistName = trackInfo['artist'] ?? 'Artista desconhecido';
+        _isMusicPlaying = trackInfo['is_playing'] ?? false;
+      });
+    }
+  }
+
+  void _handlePlayPause() async {
+    if (_isMusicPlaying) {
+      await _spotifyService.pause();
+    } else {
+      final trackInfo = await _spotifyService.getCurrentTrack();
+      if (trackInfo == null) {
+        _startPlaylist();
+      } else {
+        await _spotifyService.resume();
+      }
+    }
+  }
+
+  void _playNextTrack() async {
+    await _spotifyService.skipNext();
+    await _updatePlayerState(); // Atualiza a UI para mostrar a nova música
+  }
+
+  void _playPreviousTrack() async {
+    await _spotifyService.skipPrevious();
+    await _updatePlayerState(); // Atualiza a UI para mostrar a nova música
+  }
+
+  void _startPlaylist() async {
+    final playlistUri = await _spotifyService.getPlaylistUri();
+    if (playlistUri != null) {
+      await _spotifyService.playTrack(playlistUri);
+      // Força a atualização da UI com as informações da nova música
+      await _updatePlayerState();
+    }
+  }
+
+  // Seus outros métodos (checkGpsStatus, getCurrentLocation, etc.)
   Future<void> _checkGpsStatus() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     setState(() {
@@ -64,7 +153,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  // Ouve mudanças no status do serviço de GPS.
   void _listenToGpsStatusChanges() {
     Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
       setState(() {
@@ -73,12 +161,10 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  // Obtém a localização atual do usuário.
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Verifica se o serviço de localização está habilitado.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (mounted) {
@@ -107,19 +193,16 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      // As permissões foram negadas permanentemente. O usuário precisa ir para as configurações.
       await Geolocator.openAppSettings();
       return;
     }
 
-    // Quando as permissões são concedidas, obtemos a localização.
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
     setState(() {
       _currentPosition = position;
-      // Adiciona um marcador na localização atual.
       _markers.add(
         Marker(
           markerId: const MarkerId('currentLocation'),
@@ -129,7 +212,6 @@ class _MapScreenState extends State<MapScreen> {
       );
     });
 
-    // Move a câmera do mapa para a localização atual.
     _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
@@ -140,7 +222,6 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Gerencia o clique no botão principal de ação (Começar, Pausar, Retomar).
   void _onMainActionButtonPressed() {
     if (!_isGpsOn) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,27 +236,23 @@ class _MapScreenState extends State<MapScreen> {
       switch (_activityState) {
         case ActivityState.notStarted:
         case ActivityState.paused:
-          // Inicia ou retoma a atividade
           _activityState = ActivityState.running;
           _stopwatch.start();
           _startTimer();
           _startTrackingLocation(resume: true);
           break;
         case ActivityState.running:
-          // Pausa a atividade
           _activityState = ActivityState.paused;
           _stopwatch.stop();
           _timer?.cancel();
           _positionStreamSubscription?.pause();
           break;
         case ActivityState.finished:
-          // Não faz nada se já finalizou
           break;
       }
     });
   }
 
-  // Finaliza a atividade e reseta os valores.
   void _onStopButtonPressed() {
     setState(() {
       _stopwatch.stop();
@@ -183,23 +260,21 @@ class _MapScreenState extends State<MapScreen> {
       _positionStreamSubscription?.cancel();
       _activityState = ActivityState.finished;
 
-      // Cria o objeto com os dados da atividade concluída.
       final activityDuration = _stopwatch.elapsed;
       final activityData = ActivityData(
-        userName: 'Kenny', // Exemplo, pode vir de um serviço de usuário
-        activityTitle: 'Corrida', // Exemplo
-        runTime: 'Manhã de Quarta-feira', // Exemplo
-        location: 'São Paulo, SP', // Exemplo, pode usar geocoding
+        userName: 'Kenny',
+        activityTitle: 'Corrida',
+        runTime: 'Manhã de Quarta-feira',
+        location: 'São Paulo, SP',
         distanceInMeters: _totalDistanceInMeters,
         duration: _stopwatch.elapsed,
-        routePoints: List.from(_routePoints), // Cria uma cópia da lista
+        routePoints: List.from(_routePoints),
         calories: _caloriesBurned,
-        likes: 0, // Inicia com 0
-        comments: 0, // Inicia com 0
-        shares: 0, // Inicia com 0
+        likes: 0,
+        comments: 0,
+        shares: 0,
       );
 
-      // Navega para a tela de resumo e, DEPOIS que ela for fechada, reseta o estado.
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -207,7 +282,6 @@ class _MapScreenState extends State<MapScreen> {
               ActivityDetailScreen(activityData: activityData),
         ),
       ).then((_) {
-        // Este código executa quando o usuário volta da tela de resumo.
         setState(() {
           _activityState = ActivityState.notStarted;
           _stopwatch.reset();
@@ -221,7 +295,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  // Inicia o cronômetro para atualizar a UI.
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
@@ -231,59 +304,55 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  // Inicia o rastreamento da localização para calcular a distância.
   void _startTrackingLocation({bool resume = false}) {
     if (_positionStreamSubscription != null) {
       if (resume) {
         _positionStreamSubscription?.resume();
       }
-      return; // Já está ouvindo, não precisa criar outro stream.
+      return;
     }
 
     const LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 10, // Atualiza a cada 10 metros.
+      distanceFilter: 10,
     );
 
     _positionStreamSubscription =
-        Geolocator.getPositionStream(
-          locationSettings: locationSettings,
-        ).listen((Position position) {
-          if (_activityState != ActivityState.running) return;
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+          (Position position) {
+            if (_activityState != ActivityState.running) return;
 
-          setState(() {
-            if (_routePoints.isNotEmpty) {
-              final lastPoint = _routePoints.last;
-              final distance = Geolocator.distanceBetween(
-                lastPoint.latitude,
-                lastPoint.longitude,
-                position.latitude,
-                position.longitude,
+            setState(() {
+              if (_routePoints.isNotEmpty) {
+                final lastPoint = _routePoints.last;
+                final distance = Geolocator.distanceBetween(
+                  lastPoint.latitude,
+                  lastPoint.longitude,
+                  position.latitude,
+                  position.longitude,
+                );
+                _totalDistanceInMeters += distance;
+                _caloriesBurned = _totalDistanceInMeters / 16;
+              }
+              _routePoints.add(LatLng(position.latitude, position.longitude));
+
+              _polylines.add(
+                Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: _routePoints,
+                  color: CustomColors.primary,
+                  width: 5,
+                ),
               );
-              _totalDistanceInMeters += distance;
-              // Fórmula simples para calorias: 1 kcal a cada 16 metros (aproximado)
-              _caloriesBurned = _totalDistanceInMeters / 16;
-            }
-            _routePoints.add(LatLng(position.latitude, position.longitude));
 
-            // Atualiza a linha (Polyline) no mapa com a nova rota.
-            _polylines.add(
-              Polyline(
-                polylineId: const PolylineId('route'),
-                points: _routePoints,
-                color: CustomColors.primary,
-                width: 5,
-              ),
-            );
-
-            // Move a câmera para a nova posição
-            _mapController?.animateCamera(
-              CameraUpdate.newLatLng(
-                LatLng(position.latitude, position.longitude),
-              ),
-            );
-          });
-        });
+              _mapController?.animateCamera(
+                CameraUpdate.newLatLng(
+                  LatLng(position.latitude, position.longitude),
+                ),
+              );
+            });
+          },
+        );
   }
 
   @override
@@ -292,7 +361,6 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: CustomColors.quaternary,
       body: Stack(
         children: [
-          // Widget do Google Maps que substitui a imagem estática.
           _currentPosition == null
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
@@ -307,12 +375,11 @@ class _MapScreenState extends State<MapScreen> {
                     zoom: 16.0,
                   ),
                   markers: _markers,
-                  polylines: _polylines, // Adiciona as polylines ao mapa
-                  myLocationEnabled: true, // Mostra o ponto azul da localização
-                  myLocationButtonEnabled: true, // Botão para centralizar
+                  polylines: _polylines,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
                   zoomControlsEnabled: false,
                 ),
-          // Borda branca arredondada que enquadra o mapa.
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -321,7 +388,6 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-          // Barra de navegação do topo com ícones de perfil e configurações.
           Positioned(
             top: 40,
             left: 20,
@@ -329,7 +395,6 @@ class _MapScreenState extends State<MapScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Ícone de perfil no topo.
                 _buildTopIcon(
                   child: const Icon(Icons.person, color: CustomColors.textDark),
                   onTap: () {
@@ -341,20 +406,16 @@ class _MapScreenState extends State<MapScreen> {
                     );
                   },
                 ),
-                // Ícone de configurações no topo.
                 _buildTopIcon(
                   child: const Icon(
                     Icons.settings,
                     color: CustomColors.textDark,
                   ),
-                  onTap: () {
-                    // Ação do botão de configurações
-                  },
+                  onTap: () {},
                 ),
               ],
             ),
           ),
-          // Cards de estatísticas (Distância, Duração, Calorias).
           Positioned(
             top: 120,
             left: 20,
@@ -376,15 +437,12 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
           ),
-
-          // Botão de GPS ON/OFF
           Positioned(
-            bottom: 200, // Ajustado para ficar acima do botão 'COMEÇAR'
+            bottom: 200,
             left: 20,
             right: 20,
             child: Center(child: _buildGpsButton()),
           ),
-          // Círculo central com o ícone do tênis.
           Positioned(
             top: MediaQuery.of(context).size.height / 2.8,
             left: 0,
@@ -411,12 +469,12 @@ class _MapScreenState extends State<MapScreen> {
                         height: 90,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white,
+                          color: CustomColors.quaternary,
                         ),
                         child: SvgPicture.asset(
                           'assets/images/sapato.svg',
                           colorFilter: const ColorFilter.mode(
-                            CustomColors.tertiary,
+                            CustomColors.primary,
                             BlendMode.srcIn,
                           ),
                           width: 50,
@@ -428,41 +486,130 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-          // Botões de controle na parte inferior da tela.
           Positioned(
             bottom: 80,
             left: 0,
             right: 0,
             child: _buildBottomControls(),
           ),
+          if (_isPlayerVisible) _buildSpotifyPlayer(),
         ],
       ),
     );
   }
 
-  // Constrói os botões de controle inferiores com base no estado da atividade.
+  Widget _buildSpotifyPlayer() {
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: 200,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: CustomColors.primary.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white24, width: 1.5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Expanded(
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.skip_previous,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                    onPressed: _playPreviousTrack,
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _trackName,
+                          style: GoogleFonts.lexend(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          _artistName,
+                          style: GoogleFonts.lexend(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: IconButton(
+                    icon: Icon(
+                      _isMusicPlaying
+                          ? Icons.pause_circle_filled
+                          : Icons.play_circle_filled,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                    onPressed: _handlePlayPause,
+                  ),
+                ),
+                Expanded(
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.skip_next,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                    onPressed: _playNextTrack,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: CustomColors.tertiary,
+                    size: 24,
+                  ),
+                  onPressed: () {
+                    _spotifyService.pause();
+                    setState(() => _isPlayerVisible = false);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomControls() {
     switch (_activityState) {
       case ActivityState.running:
-        // Mostra apenas o botão de PAUSE no centro.
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [_buildPauseButton()],
         );
       case ActivityState.paused:
-        // Mostra os botões STOP e PLAY.
         return Row(
-          mainAxisAlignment:
-              MainAxisAlignment.spaceEvenly, // Inverte a posição dos botões
-          children: [
-            _buildPlayButton(), // Botão "RETOMAR"
-            _buildStopButton(),
-          ], // Botão "CONCLUIR"
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [_buildPlayButton(), _buildStopButton()],
         );
       case ActivityState.notStarted:
       case ActivityState.finished:
       default:
-        // Estado inicial com os 3 botões.
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -470,6 +617,14 @@ class _MapScreenState extends State<MapScreen> {
             _buildActionButton(
               Icons.music_note_outlined,
               CustomColors.tertiary,
+              onTap: () {
+                setState(() {
+                  _isPlayerVisible = !_isPlayerVisible;
+                  if (_isPlayerVisible && !_isSpotifyConnected) {
+                    _connectToSpotify();
+                  }
+                });
+              },
             ),
             _buildStartButton(),
             _buildActionButton(
@@ -481,7 +636,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // Constrói um ícone no topo da tela (perfil ou configurações).
   Widget _buildTopIcon({required Widget child, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
@@ -499,33 +653,34 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Constrói um botão de ação circular.
-  Widget _buildActionButton(IconData icon, Color color) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: CustomColors.secondary,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
+  Widget _buildActionButton(IconData icon, Color color, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: CustomColors.secondary,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: color, size: 30),
       ),
-      child: Icon(icon, color: color, size: 30),
     );
   }
 
-  // Constrói um card de estatística.
   Widget _buildStatsCard(String value, String unit, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      width: 110, // Largura fixa para melhor alinhamento
+      width: 110,
       decoration: BoxDecoration(
-        color: Colors.white, // Fundo branco para o card
+        color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
@@ -537,7 +692,6 @@ class _MapScreenState extends State<MapScreen> {
       ),
       child: Column(
         children: [
-          // RichText para combinar textos com estilos diferentes
           RichText(
             text: TextSpan(
               style: GoogleFonts.lexend(
@@ -548,15 +702,15 @@ class _MapScreenState extends State<MapScreen> {
                 TextSpan(
                   text: value,
                   style: const TextStyle(color: CustomColors.textDark),
-                ), // Número em preto
+                ),
                 TextSpan(
                   text: ' $unit',
                   style: TextStyle(
-                    color: CustomColors.secondary,
-                    fontSize: 12, // Tamanho menor para a unidade
-                    fontWeight: FontWeight.w500, // Peso normal para a unidade
+                    color: CustomColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-                ), // Unidade em cinza
+                ),
               ],
             ),
           ),
@@ -564,8 +718,9 @@ class _MapScreenState extends State<MapScreen> {
           Text(
             label,
             style: GoogleFonts.lexend(
-              color: CustomColors.secondary, // Rótulo em cinza
+              color: CustomColors.tertiary,
               fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -573,12 +728,9 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Constrói o botão de status do GPS.
   Widget _buildGpsButton() {
     return GestureDetector(
       onTap: () async {
-        // Abre as configurações de localização do dispositivo para o usuário
-        // poder ligar ou desligar o GPS.
         await Geolocator.openLocationSettings();
       },
       child: Container(
@@ -618,7 +770,6 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Constrói o botão "START".
   Widget _buildStartButton() {
     return GestureDetector(
       onTap: _onMainActionButtonPressed,
@@ -650,7 +801,6 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Constrói o botão "PAUSE".
   Widget _buildPauseButton() {
     return GestureDetector(
       onTap: _onMainActionButtonPressed,
@@ -675,14 +825,13 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Constrói o botão "PLAY" (Retomar).
   Widget _buildPlayButton() {
     return GestureDetector(
       onTap: _onMainActionButtonPressed,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(50), // Bordas arredondadas
+          borderRadius: BorderRadius.circular(50),
           color: CustomColors.primary,
           boxShadow: [
             BoxShadow(
@@ -715,14 +864,13 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Constrói o botão "CONCLUIR" (Finalizar).
   Widget _buildStopButton() {
     return GestureDetector(
       onTap: _onStopButtonPressed,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(50), // Bordas arredondadas
+          borderRadius: BorderRadius.circular(50),
           color: CustomColors.secondary,
           boxShadow: [
             BoxShadow(

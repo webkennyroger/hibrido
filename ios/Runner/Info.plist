@@ -30,6 +30,10 @@
 	<string>Este aplicativo precisa da sua localização para mostrar sua posição no mapa e registrar suas atividades.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Este aplicativo precisa da sua localização para registrar suas atividades em segundo plano.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>

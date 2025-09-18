@@ -10,6 +10,7 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
+    // Este é o bloco de configuração CORRETO e ÚNICO.
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -28,6 +29,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Adicionado para resolver o erro "No matching variant" do spotify_sdk.
+        // Instrui o Gradle a usar a dimensão 'default' quando nenhuma for encontrada.
+        missingDimensionStrategy("default", "default")
+
+        manifestPlaceholders += mapOf(
+            "redirectSchemeName" to "hibrido",
+            "redirectHostName" to "callback"
+        )
     }
 
     buildTypes {
@@ -36,7 +46,17 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
+        debug {
+            // Adicionado para resolver o erro "No matching variant" do spotify_sdk.
+            // Permite que a build de 'debug' use a versão 'release' de uma dependência se a de 'debug' não for encontrada.
+            matchingFallbacks += "release"
+        }
     }
+}
+
+dependencies {
+    // Adiciona a dependência explícita para o módulo do Spotify SDK
+    implementation(project(":spotify-app-remote"))
 }
 
 flutter {

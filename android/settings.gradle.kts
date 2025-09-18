@@ -23,3 +23,7 @@ plugins {
 }
 
 include(":app")
+
+// Adiciona o SDK do Spotify como um módulo para que o pacote spotify_sdk o encontre
+include(":spotify-app-remote")
+project(":spotify-app-remote").projectDir = file("app/libs")

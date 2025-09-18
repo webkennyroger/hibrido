@@ -65,16 +65,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       // Texto de saudação para o usuário.
                       Text(
-                        'HI JAMES',
+                        'KENNY ROGER',
                         style: GoogleFonts.lexend(
-                          color: CustomColors.primary,
+                          color: CustomColors.textDark,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       // Subtítulo ou status do usuário.
                       Text(
-                        'Fitness Freak',
+                        'Hibrido',
                         style: GoogleFonts.lexend(
                           color: CustomColors.textDark.withOpacity(0.7),
                           fontSize: 12,
