@@ -507,76 +507,87 @@ class _MapScreenState extends State<MapScreen> {
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: CustomColors.primary.withOpacity(0.25),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white24, width: 1.5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Expanded(
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.skip_previous,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    onPressed: _playPreviousTrack,
-                  ),
+          child: Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 8,
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                decoration: BoxDecoration(
+                  color: CustomColors.primary.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white24, width: 1.5),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                      child: Column(
+                        children: [
+                          Text(
+                            _trackName,
+                            style: GoogleFonts.lexend(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _artistName,
+                            style: GoogleFonts.lexend(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Text(
-                          _trackName,
-                          style: GoogleFonts.lexend(
+                        IconButton(
+                          icon: const Icon(
+                            Icons.skip_previous,
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            size: 40,
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          onPressed: _playPreviousTrack,
                         ),
-                        Text(
-                          _artistName,
-                          style: GoogleFonts.lexend(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 12,
+                        IconButton(
+                          icon: Icon(
+                            _isMusicPlaying
+                                ? Icons.pause_circle_filled
+                                : Icons.play_circle_filled,
+                            color: Colors.white,
+                            size: 50,
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          onPressed: _handlePlayPause,
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.skip_next,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                          onPressed: _playNextTrack,
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-                Expanded(
-                  child: IconButton(
-                    icon: Icon(
-                      _isMusicPlaying
-                          ? Icons.pause_circle_filled
-                          : Icons.play_circle_filled,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    onPressed: _handlePlayPause,
-                  ),
-                ),
-                Expanded(
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.skip_next,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    onPressed: _playNextTrack,
-                  ),
-                ),
-                IconButton(
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
                   icon: const Icon(
                     Icons.close,
                     color: CustomColors.tertiary,
@@ -587,8 +598,8 @@ class _MapScreenState extends State<MapScreen> {
                     setState(() => _isPlayerVisible = false);
                   },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
