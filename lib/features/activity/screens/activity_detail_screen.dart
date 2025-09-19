@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hibrido/models/activity_data.dart';
-import 'package:hibrido/screens/activity_card.dart';
+import 'package:hibrido/features/activity/models/activity_data.dart';
+import 'package:hibrido/features/activity/widgets/activity_card.dart';
 
 class ActivityDetailScreen extends StatelessWidget {
   final ActivityData activityData;

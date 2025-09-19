@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:hibrido/models/activity_data.dart';
-import 'package:hibrido/screens/comments_screen.dart';
-import 'package:hibrido/theme/custom_colors.dart';
-import 'share_activity_screen.dart';
+import 'package:hibrido/features/activity/models/activity_data.dart';
+import 'package:hibrido/features/activity/screens/comments_screen.dart';
+import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
 
 class ActivityCard extends StatelessWidget {
   final ActivityData activityData;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../core/theme/custom_colors.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/activity/models/activity_data.dart';
 
 class CommentsScreen extends StatefulWidget {
   final ActivityData activityData;

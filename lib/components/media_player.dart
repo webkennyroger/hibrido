@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
-import 'package:hibrido/theme/custom_colors.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
 
 class MediaPlayer extends StatelessWidget {
   final String trackName;

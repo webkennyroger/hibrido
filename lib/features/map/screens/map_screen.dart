@@ -5,13 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:hibrido/models/activity_data.dart';
-import '../components/media_player.dart';
-import '../services/spotify_service.dart';
-import '../theme/custom_colors.dart';
-import 'home_screen.dart';
-import 'profile_screen.dart';
-import '../widgets/activity_detail_screen.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/activity/models/activity_data.dart';
+import 'package:hibrido/features/activity/screens/activity_detail_screen.dart';
+import 'package:hibrido/features/profile/screens/profile_screen.dart';
+import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 
 class MapScreen extends StatefulWidget {

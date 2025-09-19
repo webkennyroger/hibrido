@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hibrido/screens/map_screen.dart';
-import 'package:hibrido/screens/profile_screen.dart';
-import '../../theme/custom_colors.dart';
-import 'home_screen.dart';
-import 'activity_screen.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/activity/screens/activity_screen.dart';
+import 'package:hibrido/features/home/screens/home_screen.dart';
+import 'package:hibrido/features/map/screens/map_screen.dart';
+import 'package:hibrido/features/profile/screens/profile_screen.dart';
 
 class AppScreen extends StatefulWidget {
   const AppScreen({Key? key}) : super(key: key);

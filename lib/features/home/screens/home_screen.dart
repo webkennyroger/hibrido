@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../../theme/custom_colors.dart';
-import 'challenges_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);

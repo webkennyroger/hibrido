@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/custom_colors.dart';
-import '../../features/app/screens/app_screen.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/app/screens/app_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
