@@ -9,7 +9,7 @@ import 'package:hibrido/core/theme/custom_colors.dart';
 class ActivityCard extends StatelessWidget {
   final ActivityData activityData;
 
-  const ActivityCard({Key? key, required this.activityData}) : super(key: key);
+  const ActivityCard({super.key, required this.activityData});
 
   // Formata a duração para o formato MM:SS
   String _formatDuration(Duration duration) {
@@ -125,9 +125,9 @@ class ActivityCard extends StatelessWidget {
             if (value == 'delete') {
               // Aqui você pode adicionar a lógica para excluir a atividade,
               // como mostrar um diálogo de confirmação.
-              print('Excluir atividade selecionado');
+              // print('Excluir atividade selecionado');
             } else {
-              print('$value selecionado');
+              // print('$value selecionado');
             }
           },
           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[

@@ -1,3 +1,4 @@
+// main_screen.dart
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -8,12 +9,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/activity/screens/activity_detail_screen.dart';
-import 'package:hibrido/features/profile/screens/profile_screen.dart';
 import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({Key? key}) : super(key: key);
+  const MapScreen({super.key});
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -21,10 +21,14 @@ class MapScreen extends StatefulWidget {
 
 enum ActivityState { notStarted, running, paused, finished }
 
+enum MapTypeOption { normal, satellite, hybrid, winter }
+
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
   Position? _currentPosition;
   final Set<Marker> _markers = {};
+  MapType _currentMapType = MapType.normal;
+  double _currentCameraTilt = 0.0;
   bool _isGpsOn = false;
   final Set<Polyline> _polylines = {};
 
@@ -47,34 +51,36 @@ class _MapScreenState extends State<MapScreen> {
   bool _isMusicPlaying = false;
   bool _isSpotifyConnected = false;
 
+  // Novos estados para as opções de mapa e camadas
+  MapTypeOption _selectedMapType = MapTypeOption.normal;
+
+  bool _showMapOptions = false;
+
   @override
   void initState() {
     super.initState();
     _checkGpsStatus();
     _listenToGpsStatusChanges();
     _getCurrentLocation();
-    _listenToSpotifyPlayerState(); // Novo método para ouvir o player
+    _listenToSpotifyPlayerState();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _positionStreamSubscription?.cancel();
-    _playerStateSubscription?.cancel(); // Cancela a inscrição do listener
+    _playerStateSubscription?.cancel();
     _mapController?.dispose();
     super.dispose();
   }
 
-  // Novo método para ouvir as mudanças de estado do player do Spotify
   void _listenToSpotifyPlayerState() {
     _playerStateSubscription = SpotifySdk.subscribePlayerState().listen((
       playerState,
     ) {
       if (mounted) {
         setState(() {
-          _isMusicPlaying = playerState.isPaused != null
-              ? !playerState.isPaused!
-              : false;
+          _isMusicPlaying = !playerState.isPaused;
           _trackName = playerState.track?.name ?? 'Música desconhecida';
           _artistName =
               playerState.track?.artist.name ?? 'Artista desconhecido';
@@ -83,23 +89,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  Future<void> _connectToSpotify() async {
-    final isConnected = await _spotifyService.initializeAndAuthenticate();
-    if (mounted) {
-      setState(() {
-        _isSpotifyConnected = isConnected;
-        if (isConnected) {
-          _artistName = 'Conectado!';
-          _startPlaylist();
-        } else {
-          _artistName = 'Falha na conexão';
-        }
-      });
-    }
-  }
-
-  // O método _updatePlayerState não é mais necessário, pois o listener faz isso
-  // de forma mais eficiente. No entanto, é bom mantê-lo para chamadas pontuais.
   Future<void> _updatePlayerState() async {
     final trackInfo = await _spotifyService.getCurrentTrack();
     if (mounted && trackInfo != null) {
@@ -126,24 +115,22 @@ class _MapScreenState extends State<MapScreen> {
 
   void _playNextTrack() async {
     await _spotifyService.skipNext();
-    await _updatePlayerState(); // Atualiza a UI para mostrar a nova música
+    await _updatePlayerState();
   }
 
   void _playPreviousTrack() async {
     await _spotifyService.skipPrevious();
-    await _updatePlayerState(); // Atualiza a UI para mostrar a nova música
+    await _updatePlayerState();
   }
 
   void _startPlaylist() async {
     final playlistUri = await _spotifyService.getPlaylistUri();
     if (playlistUri != null) {
       await _spotifyService.playTrack(playlistUri);
-      // Força a atualização da UI com as informações da nova música
       await _updatePlayerState();
     }
   }
 
-  // Seus outros métodos (checkGpsStatus, getCurrentLocation, etc.)
   Future<void> _checkGpsStatus() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     setState(() {
@@ -196,7 +183,7 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
 
     setState(() {
@@ -213,6 +200,7 @@ class _MapScreenState extends State<MapScreen> {
     _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
+          tilt: _currentCameraTilt,
           target: LatLng(position.latitude, position.longitude),
           zoom: 16.0,
         ),
@@ -233,17 +221,27 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       switch (_activityState) {
         case ActivityState.notStarted:
-        case ActivityState.paused:
+          _stopwatch.reset();
+          _routePoints.clear();
+          _polylines.clear();
+          _totalDistanceInMeters = 0.0;
+          _caloriesBurned = 0.0;
           _activityState = ActivityState.running;
           _stopwatch.start();
           _startTimer();
-          _startTrackingLocation(resume: true);
+          _startTrackingLocation(resume: false);
           break;
         case ActivityState.running:
           _activityState = ActivityState.paused;
           _stopwatch.stop();
           _timer?.cancel();
           _positionStreamSubscription?.pause();
+          break;
+        case ActivityState.paused:
+          _activityState = ActivityState.running;
+          _stopwatch.start();
+          _startTimer();
+          _startTrackingLocation(resume: true);
           break;
         case ActivityState.finished:
           break;
@@ -258,7 +256,6 @@ class _MapScreenState extends State<MapScreen> {
       _positionStreamSubscription?.cancel();
       _activityState = ActivityState.finished;
 
-      final activityDuration = _stopwatch.elapsed;
       final activityData = ActivityData(
         userName: 'Kenny',
         activityTitle: 'Corrida',
@@ -353,6 +350,30 @@ class _MapScreenState extends State<MapScreen> {
         );
   }
 
+  void _updateMapType(MapTypeOption option) {
+    setState(() {
+      _selectedMapType = option;
+      switch (option) {
+        case MapTypeOption.normal:
+          _currentMapType = MapType.normal;
+          break;
+        case MapTypeOption.satellite:
+          _currentMapType = MapType.satellite;
+          break;
+        case MapTypeOption.hybrid:
+          _currentMapType = MapType.hybrid;
+          break;
+        case MapTypeOption.winter:
+          // A lógica para 'Inverno' seria mais complexa, exigindo um
+          // serviço de mapa ou conjunto de dados de terceiros.
+          // Por enquanto, vamos manter o padrão.
+          _currentMapType = MapType.normal;
+          break;
+        // No default case
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -362,6 +383,8 @@ class _MapScreenState extends State<MapScreen> {
           _currentPosition == null
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
+                  mapType: _currentMapType,
+                  tiltGesturesEnabled: true,
                   onMapCreated: (GoogleMapController controller) {
                     _mapController = controller;
                   },
@@ -371,18 +394,21 @@ class _MapScreenState extends State<MapScreen> {
                       _currentPosition!.longitude,
                     ),
                     zoom: 16.0,
+                    tilt: _currentCameraTilt,
                   ),
                   markers: _markers,
                   polylines: _polylines,
                   myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
+                  myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
                 ),
           Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.white, width: 8),
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.white, width: 8),
+                ),
               ),
             ),
           ),
@@ -394,15 +420,12 @@ class _MapScreenState extends State<MapScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildTopIcon(
-                  child: const Icon(Icons.person, color: CustomColors.textDark),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ProfileScreen(),
-                      ),
-                    );
-                  },
+                  child: const Icon(
+                    Icons.route_outlined,
+                    color: CustomColors.textDark,
+                  ),
+                  onTap:
+                      () {}, // Ação para a tela de rotas pode ser adicionada aqui
                 ),
                 _buildTopIcon(
                   child: const Icon(
@@ -414,6 +437,33 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
           ),
+          if (_activityState == ActivityState.notStarted)
+            Positioned(
+              bottom: 200,
+              right: 20,
+              child: Column(
+                children: [
+                  _buildMapControlButton(
+                    icon: Icons.layers_outlined,
+                    onPressed: () {
+                      setState(() {
+                        _showMapOptions = !_showMapOptions;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildMapControlButton(
+                    icon: Icons.threed_rotation,
+                    onPressed: _toggle3DView,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildMapControlButton(
+                    icon: Icons.my_location,
+                    onPressed: _centerOnLocation,
+                  ),
+                ],
+              ),
+            ),
           Positioned(
             top: 120,
             left: 20,
@@ -426,7 +476,7 @@ class _MapScreenState extends State<MapScreen> {
                   'km',
                   'Distância',
                 ),
-                _buildStatsCard(_durationText, 'h', 'Duração'),
+                _buildStatsCard(_durationText, '', 'Duração'),
                 _buildStatsCard(
                   _caloriesBurned.toStringAsFixed(0),
                   'kcal',
@@ -451,7 +501,7 @@ class _MapScreenState extends State<MapScreen> {
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.4),
+                  color: Colors.white.withAlpha((255 * 0.4).round()),
                 ),
                 child: Center(
                   child: Container(
@@ -459,7 +509,7 @@ class _MapScreenState extends State<MapScreen> {
                     height: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withAlpha((255 * 0.6).round()),
                     ),
                     child: Center(
                       child: Container(
@@ -471,8 +521,8 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         child: SvgPicture.asset(
                           'assets/images/sapato.svg',
-                          colorFilter: const ColorFilter.mode(
-                            CustomColors.primary,
+                          colorFilter: ColorFilter.mode(
+                            CustomColors.primary.withAlpha((255 * 0.4).round()),
                             BlendMode.srcIn,
                           ),
                           width: 50,
@@ -491,11 +541,162 @@ class _MapScreenState extends State<MapScreen> {
             child: _buildBottomControls(),
           ),
           if (_isPlayerVisible) _buildSpotifyPlayer(),
+          if (_showMapOptions) _buildMapOptionSelector(),
         ],
       ),
     );
   }
 
+  Widget _buildMapOptionSelector() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: GestureDetector(
+        onVerticalDragEnd: (details) {
+          if (details.primaryVelocity! > 0) {
+            setState(() {
+              _showMapOptions = false;
+            });
+          }
+        },
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF232530),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  height: 4,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha((255 * 0.3).round()),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Tipos de mapa',
+                style: GoogleFonts.lexend(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildMapOptionsRow(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapOptionsRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildMapOptionItem(
+          icon: 'assets/images/maps/map_standard.png',
+          label: 'Padrão',
+          option: MapTypeOption.normal,
+          isSelected: _selectedMapType == MapTypeOption.normal,
+          onTap: () => _updateMapType(MapTypeOption.normal),
+        ),
+        _buildMapOptionItem(
+          icon: 'assets/images/maps/map_satellite.png',
+          label: 'Satélite',
+          option: MapTypeOption.satellite,
+          isSelected: _selectedMapType == MapTypeOption.satellite,
+          onTap: () => _updateMapType(MapTypeOption.satellite),
+        ),
+        _buildMapOptionItem(
+          icon: 'assets/images/maps/map_hybrid.png',
+          label: 'Híbrido',
+          option: MapTypeOption.hybrid,
+          isSelected: _selectedMapType == MapTypeOption.hybrid,
+          onTap: () => _updateMapType(MapTypeOption.hybrid),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMapOptionItem({
+    required String icon,
+    required String label,
+    required dynamic option,
+    required bool isSelected,
+    required VoidCallback onTap,
+    bool isLocked = false,
+  }) {
+    return GestureDetector(
+      onTap: isLocked ? null : onTap,
+      child: Container(
+        width: 70,
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected
+                          ? CustomColors.primary
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      icon,
+                      fit: BoxFit.cover,
+                      color: isLocked
+                          ? Colors.white.withAlpha((255 * 0.5).round())
+                          : null,
+                      colorBlendMode: isLocked ? BlendMode.modulate : null,
+                    ),
+                  ),
+                ),
+                if (isLocked)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Icon(Icons.lock, color: Colors.white, size: 16),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.lexend(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // e o player do Spotify,
   Widget _buildSpotifyPlayer() {
     return Positioned(
       left: 16,
@@ -513,7 +714,7 @@ class _MapScreenState extends State<MapScreen> {
                   horizontal: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: CustomColors.primary.withOpacity(0.25),
+                  color: CustomColors.primary.withAlpha((255 * 0.25).round()),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white24, width: 1.5),
                 ),
@@ -538,7 +739,10 @@ class _MapScreenState extends State<MapScreen> {
                           Text(
                             _artistName,
                             style: GoogleFonts.lexend(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withAlpha(
+                                // This was already corrected in the provided file.
+                                (255 * 0.7).round(),
+                              ),
                               fontSize: 12,
                             ),
                             textAlign: TextAlign.center,
@@ -607,40 +811,17 @@ class _MapScreenState extends State<MapScreen> {
   Widget _buildBottomControls() {
     switch (_activityState) {
       case ActivityState.running:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [_buildPauseButton()],
-        );
+        return _RunningControls(onPressed: _onMainActionButtonPressed);
       case ActivityState.paused:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [_buildPlayButton(), _buildStopButton()],
+        return _PausedControls(
+          onResume: _onMainActionButtonPressed,
+          onStop: _onStopButtonPressed,
         );
       case ActivityState.notStarted:
       case ActivityState.finished:
-      default:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _buildActionButton(
-              Icons.music_note_outlined,
-              CustomColors.tertiary,
-              onTap: () {
-                setState(() {
-                  _isPlayerVisible = !_isPlayerVisible;
-                  if (_isPlayerVisible && !_isSpotifyConnected) {
-                    _connectToSpotify();
-                  }
-                });
-              },
-            ),
-            _buildStartButton(),
-            _buildActionButton(
-              Icons.track_changes_outlined,
-              CustomColors.tertiary,
-            ),
-          ],
+        return _NotStartedControls(
+          onStart: _onMainActionButtonPressed,
+          onMusic: _toggleSpotifyPlayer,
         );
     }
   }
@@ -654,32 +835,13 @@ class _MapScreenState extends State<MapScreen> {
           color: Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5),
-          ],
-        ),
-        child: child,
-      ),
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, Color color, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: CustomColors.secondary,
-          boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+              color: Colors.black.withAlpha((255 * 0.1).round()),
+              blurRadius: 5,
             ),
           ],
         ),
-        child: Icon(icon, color: color, size: 30),
+        child: child,
       ),
     );
   }
@@ -693,7 +855,7 @@ class _MapScreenState extends State<MapScreen> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha((255 * 0.1).round()),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -750,7 +912,7 @@ class _MapScreenState extends State<MapScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha((255 * 0.1).round()),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -779,9 +941,124 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  Widget _buildMapControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha((255 * 0.1).round()),
+              blurRadius: 5,
+            ),
+          ],
+        ),
+        child: Icon(icon, color: CustomColors.textDark, size: 24),
+      ),
+    );
+  }
+
+  void _toggle3DView() {
+    final newTilt = _currentCameraTilt == 0.0 ? 60.0 : 0.0;
+    setState(() {
+      _currentCameraTilt = newTilt;
+    });
+    _centerOnLocation(); // Re-centraliza com a nova inclinação
+  }
+
+  void _centerOnLocation() {
+    if (_currentPosition != null) {
+      _mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+            ),
+            zoom: 17,
+            tilt: _currentCameraTilt,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _toggleSpotifyPlayer() {
+    setState(() {
+      _isPlayerVisible = !_isPlayerVisible;
+      if (_isPlayerVisible && !_isSpotifyConnected) {
+        _spotifyService.initializeAndAuthenticate().then((isConnected) {
+          if (mounted) {
+            setState(() {
+              _isSpotifyConnected = isConnected;
+              if (isConnected) _startPlaylist();
+            });
+          }
+        });
+      }
+    });
+  }
+}
+
+class _NotStartedControls extends StatelessWidget {
+  final VoidCallback onStart;
+  final VoidCallback onMusic;
+
+  const _NotStartedControls({required this.onStart, required this.onMusic});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildActionButton(
+          Icons.music_note_outlined,
+          CustomColors.tertiary,
+          onTap: onMusic,
+        ),
+        _buildStartButton(),
+        _buildIconWithLabel(
+          icon: 'assets/images/sapato.svg',
+          label: 'Corrida',
+          iconSize: 30,
+          onTap: () {},
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(IconData icon, Color color, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: CustomColors.secondary,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha((255 * 0.1).round()),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: color, size: 30),
+      ),
+    );
+  }
+
   Widget _buildStartButton() {
     return GestureDetector(
-      onTap: _onMainActionButtonPressed,
+      onTap: onStart,
       child: Container(
         width: 110,
         height: 110,
@@ -790,7 +1067,7 @@ class _MapScreenState extends State<MapScreen> {
           color: CustomColors.primary,
           boxShadow: [
             BoxShadow(
-              color: CustomColors.primary.withOpacity(0.4),
+              color: CustomColors.primary.withAlpha((255 * 0.4).round()),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -810,9 +1087,78 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  Widget _buildIconWithLabel({
+    required String icon,
+    required String label,
+    required double iconSize,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: CustomColors.primary.withAlpha((255 * 0.6).round()),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((255 * 0.1).round()),
+                  blurRadius: 5,
+                ),
+              ],
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                icon,
+                colorFilter: const ColorFilter.mode(
+                  CustomColors.textDark,
+                  BlendMode.srcIn,
+                ),
+                width: iconSize,
+              ),
+            ),
+          ),
+          Positioned(
+            top: -5,
+            right: -5,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: CustomColors.tertiary,
+              ),
+              child: const Icon(
+                Icons.directions_run,
+                color: CustomColors.primary,
+                size: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RunningControls extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _RunningControls({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [_buildPauseButton()],
+    );
+  }
+
   Widget _buildPauseButton() {
     return GestureDetector(
-      onTap: _onMainActionButtonPressed,
+      onTap: onPressed,
       child: Container(
         width: 110,
         height: 110,
@@ -821,7 +1167,7 @@ class _MapScreenState extends State<MapScreen> {
           color: CustomColors.primary,
           boxShadow: [
             BoxShadow(
-              color: CustomColors.primary.withOpacity(0.4),
+              color: CustomColors.primary.withAlpha((255 * 0.4).round()),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -833,10 +1179,25 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
   }
+}
+
+class _PausedControls extends StatelessWidget {
+  final VoidCallback onResume;
+  final VoidCallback onStop;
+
+  const _PausedControls({required this.onResume, required this.onStop});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [_buildPlayButton(), _buildStopButton()],
+    );
+  }
 
   Widget _buildPlayButton() {
     return GestureDetector(
-      onTap: _onMainActionButtonPressed,
+      onTap: onResume,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         decoration: BoxDecoration(
@@ -844,7 +1205,7 @@ class _MapScreenState extends State<MapScreen> {
           color: CustomColors.primary,
           boxShadow: [
             BoxShadow(
-              color: CustomColors.primary.withOpacity(0.4),
+              color: CustomColors.primary.withAlpha((255 * 0.4).round()),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -875,7 +1236,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _buildStopButton() {
     return GestureDetector(
-      onTap: _onStopButtonPressed,
+      onTap: onStop,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         decoration: BoxDecoration(
@@ -883,7 +1244,7 @@ class _MapScreenState extends State<MapScreen> {
           color: CustomColors.secondary,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha((255 * 0.1).round()),
               blurRadius: 5,
               offset: const Offset(0, 5),
             ),

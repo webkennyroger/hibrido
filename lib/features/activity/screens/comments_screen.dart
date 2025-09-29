@@ -7,8 +7,7 @@ import 'package:hibrido/features/activity/models/activity_data.dart';
 class CommentsScreen extends StatefulWidget {
   final ActivityData activityData;
 
-  const CommentsScreen({Key? key, required this.activityData})
-    : super(key: key);
+  const CommentsScreen({super.key, required this.activityData});
   @override
   State<CommentsScreen> createState() => _CommentsScreenState();
 }

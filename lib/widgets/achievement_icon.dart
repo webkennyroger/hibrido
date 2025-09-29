@@ -6,8 +6,7 @@ class AchievementIcon extends StatelessWidget {
   final String subtitle;
   final String imageUrl;
 
-  const AchievementIcon(this.title, this.subtitle, this.imageUrl, {Key? key})
-      : super(key: key);
+  const AchievementIcon(this.title, this.subtitle, this.imageUrl, {super.key});
 
   @override
   Widget build(BuildContext context) {

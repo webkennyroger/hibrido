@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/screens/activity_screen.dart';
 import 'package:hibrido/features/home/screens/home_screen.dart';
@@ -7,7 +6,7 @@ import 'package:hibrido/features/map/screens/map_screen.dart';
 import 'package:hibrido/features/profile/screens/profile_screen.dart';
 
 class AppScreen extends StatefulWidget {
-  const AppScreen({Key? key}) : super(key: key);
+  const AppScreen({super.key});
 
   @override
   State<AppScreen> createState() => _AppScreenState();
@@ -60,7 +59,7 @@ class _AppScreenState extends State<AppScreen> {
               borderRadius: BorderRadius.circular(50),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withAlpha((255 * 0.1).round()),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -86,7 +85,7 @@ class _AppScreenState extends State<AppScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: CustomColors.primary.withOpacity(0.4),
+                  color: CustomColors.primary.withAlpha((255 * 0.4).round()),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -148,7 +147,7 @@ class _AppScreenState extends State<AppScreen> {
           icon,
           color: isSelected
               ? CustomColors.textDark
-              : CustomColors.textDark.withOpacity(0.7),
+              : CustomColors.textDark.withAlpha((255 * 0.7).round()),
           size: 28,
         ),
       ),

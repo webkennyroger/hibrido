@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hibrido/features/app/screens/app_screen.dart';
-import 'screens/welcome_screen.dart';
 import 'core/theme/custom_colors.dart';
 
 void main() {

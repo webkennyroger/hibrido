@@ -14,8 +14,7 @@ import 'package:share_plus/share_plus.dart';
 class ShareActivityScreen extends StatefulWidget {
   final ActivityData activityData;
 
-  const ShareActivityScreen({Key? key, required this.activityData})
-    : super(key: key);
+  const ShareActivityScreen({super.key, required this.activityData});
 
   @override
   State<ShareActivityScreen> createState() => _ShareActivityScreenState();
@@ -42,7 +41,7 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
           _darkMapStyle = string;
         })
         .catchError((error) {
-          print("Erro ao carregar o estilo do mapa: $error");
+          // print("Erro ao carregar o estilo do mapa: $error");
         });
   }
 
@@ -71,7 +70,8 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
         XFile(file.path),
       ], text: 'Confira minha corrida!');
     } catch (e) {
-      print('Erro ao compartilhar atividade: $e');
+      // print('Erro ao compartilhar atividade: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Não foi possível compartilhar a imagem.'),
@@ -140,6 +140,7 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
           child: GoogleMap(
+            style: isDarkMode ? _darkMapStyle : null,
             initialCameraPosition: CameraPosition(
               target: widget.activityData.routePoints.isNotEmpty
                   ? widget.activityData.routePoints.first
@@ -153,19 +154,6 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
                 color: isDarkMode ? Colors.white : CustomColors.primary,
                 width: 4,
               ),
-            },
-            onMapCreated: (controller) {
-              if (isDarkMode) {
-                controller.setMapStyle(_darkMapStyle);
-              }
-              if (widget.activityData.routePoints.isNotEmpty) {
-                controller.animateCamera(
-                  CameraUpdate.newLatLngBounds(
-                    _boundsFromLatLngList(widget.activityData.routePoints),
-                    60.0, // padding
-                  ),
-                );
-              }
             },
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -240,26 +228,5 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
         borderRadius: BorderRadius.circular(5),
       ),
     );
-  }
-
-  // Função auxiliar para calcular os limites do mapa
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    if (list.isEmpty) {
-      return LatLngBounds(
-        northeast: const LatLng(0, 0),
-        southwest: const LatLng(0, 0),
-      );
-    }
-    double x0 = list.first.latitude,
-        x1 = list.first.latitude,
-        y0 = list.first.longitude,
-        y1 = list.first.longitude;
-    for (LatLng latLng in list) {
-      if (latLng.latitude > x1) x1 = latLng.latitude;
-      if (latLng.latitude < x0) x0 = latLng.latitude;
-      if (latLng.longitude > y1) y1 = latLng.longitude;
-      if (latLng.longitude < y0) y0 = latLng.longitude;
-    }
-    return LatLngBounds(northeast: LatLng(x1, y1), southwest: LatLng(x0, y0));
   }
 }

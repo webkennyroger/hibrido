@@ -5,7 +5,7 @@ import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -13,18 +13,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController();
-  int _currentPage = 0;
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  CalendarFormat _calendarFormat = CalendarFormat.week;
+  final CalendarFormat _calendarFormat = CalendarFormat.week;
 
   @override
   void initState() {
     super.initState();
     _pageController.addListener(() {
       setState(() {
-        _currentPage = _pageController.page!.round();
+        // int _currentPage = _pageController.page!.round();
       });
     });
   }
@@ -76,7 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         'Hibrido',
                         style: GoogleFonts.lexend(
-                          color: CustomColors.textDark.withOpacity(0.7),
+                          color: CustomColors.textDark.withAlpha(
+                            (255 * 0.7).round(),
+                          ),
                           fontSize: 12,
                         ),
                       ),
@@ -145,7 +146,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       '(4)',
                       style: GoogleFonts.lexend(
-                        color: CustomColors.textDark.withOpacity(0.7),
+                        color: CustomColors.textDark.withAlpha(
+                          (255 * 0.7).round(),
+                        ),
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -195,17 +198,14 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         // CircleAvatar serve como um fundo circular para o ícone.
         CircleAvatar(
-          backgroundColor: CustomColors.primary.withOpacity(0.2),
+          backgroundColor: CustomColors.primary.withAlpha((255 * 0.2).round()),
           child: Icon(icon, color: CustomColors.primary),
         ),
         const SizedBox(height: 8),
         // Text exibe o rótulo do desafio abaixo do ícone.
         Text(
           label,
-          style: GoogleFonts.lexend(
-            color: CustomColors.textDark,
-            fontSize: 10,
-          ),
+          style: GoogleFonts.lexend(color: CustomColors.textDark, fontSize: 10),
           textAlign: TextAlign.center,
         ),
       ],
@@ -296,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             value,
             style: GoogleFonts.lexend(
-              color: CustomColors.textDark.withOpacity(0.7),
+              color: CustomColors.textDark.withAlpha((255 * 0.7).round()),
               fontSize: 08,
               fontWeight: FontWeight.bold,
             ),
@@ -359,10 +359,10 @@ class _HomeScreenState extends State<HomeScreen> {
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
           defaultTextStyle: TextStyle(
-            color: CustomColors.textDark.withOpacity(0.7),
+            color: CustomColors.textDark.withAlpha((255 * 0.7).round()),
           ),
           weekendTextStyle: TextStyle(
-            color: CustomColors.textDark.withOpacity(0.7),
+            color: CustomColors.textDark.withAlpha((255 * 0.7).round()),
           ),
           todayDecoration: const BoxDecoration(
             color: Colors.transparent,

@@ -10,13 +10,13 @@ class RunRecordCard extends StatelessWidget {
   final String calories;
 
   const RunRecordCard(
-    this.date,
-    this.distance,
-    this.time,
-    this.pace,
-    this.calories, {
-    Key? key,
-  }) : super(key: key);
+    this.date, {
+    super.key,
+    required this.distance,
+    required this.time,
+    required this.pace,
+    required this.calories,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +82,9 @@ class RunRecordCard extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.lexend(
-            color: CustomColors.textDark.withOpacity(0.7),
+            color: CustomColors.textDark.withAlpha(
+              (255 * 0.7).round(),
+            ), // This was already corrected.
             fontSize: 12,
           ),
         ),

@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/custom_colors.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,7 +144,9 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 5),
                     LinearProgressIndicator(
                       value: 35000 / 50000,
-                      backgroundColor: CustomColors.card.withOpacity(0.5),
+                      backgroundColor: CustomColors.card.withAlpha(
+                        (255 * 0.5).round(),
+                      ),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         CustomColors.primary,
                       ),

@@ -4,7 +4,7 @@ import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/app/screens/app_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({Key? key}) : super(key: key);
+  const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -105,11 +105,11 @@ class WelcomeScreen extends StatelessWidget {
                         MediaQuery.of(context).size.width *
                         0.6, // Limita a largura do texto
                     child: Text(
-                      'Compartilha sua corrida de um jeito triunfal',
+                      'Compartilha sua corrida de um jeito triunfal', // Texto com leve transparência
                       style: GoogleFonts.lexend(
-                        color: CustomColors.textLight.withOpacity(
-                          0.8,
-                        ), // Texto com leve transparência
+                        color: CustomColors.textLight.withAlpha(
+                          (255 * 0.8).round(),
+                        ),
                         fontSize: 16,
                       ),
                     ),
@@ -137,8 +137,8 @@ class WelcomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(100),
                         ),
                         elevation: 10, // Sombra para dar profundidade
-                        shadowColor: CustomColors.primary.withOpacity(
-                          0.5,
+                        shadowColor: CustomColors.primary.withAlpha(
+                          (255 * 0.5).round(),
                         ), // Cor da sombra
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,

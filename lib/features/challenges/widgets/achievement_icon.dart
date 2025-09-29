@@ -7,8 +7,7 @@ class AchievementIcon extends StatelessWidget {
   final String subtitle;
   final String imageUrl;
 
-  const AchievementIcon(this.title, this.subtitle, this.imageUrl, {Key? key})
-      : super(key: key);
+  const AchievementIcon(this.title, this.subtitle, this.imageUrl, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +56,10 @@ class AchievementIcon extends StatelessWidget {
         Text(
           subtitle,
           textAlign: TextAlign.center,
-          style: GoogleFonts.lexend(color: CustomColors.textLight.withOpacity(0.7), fontSize: 10),
+          style: GoogleFonts.lexend(
+            color: CustomColors.textLight.withAlpha((255 * 0.7).round()),
+            fontSize: 10,
+          ),
         ),
       ],
     );

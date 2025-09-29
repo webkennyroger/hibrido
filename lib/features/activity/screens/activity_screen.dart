@@ -6,7 +6,7 @@ import 'package:hibrido/features/activity/models/activity_data.dart';
 import '../widgets/activity_card.dart';
 
 class ActivityScreen extends StatelessWidget {
-  const ActivityScreen({Key? key}) : super(key: key);
+  const ActivityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

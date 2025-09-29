@@ -7,7 +7,7 @@ import '../widgets/challenge_card.dart';
 import '../widgets/run_record_card.dart';
 
 class ChallengesScreen extends StatelessWidget {
-  const ChallengesScreen({Key? key}) : super(key: key);
+  const ChallengesScreen({super.key});
 
   /// Constrói todo o conteúdo para a aba 'Conquistas'.
   Widget _buildActiveContent() {
@@ -143,19 +143,25 @@ class ChallengesScreen extends StatelessWidget {
           // Lista de cards com os registros de corridas.
           const RunRecordCard(
             'Manhã de quarta-feira',
-            '6,28',
-            '50:14',
-            '8:00',
-            '414',
+            distance: '6,28',
+            time: '50:14', // The named parameter 'time' isn't defined.
+            pace: '8:00',
+            calories: '414',
           ),
           const RunRecordCard(
             'Manhã de segunda-feira',
-            '5,04',
-            '23:40',
-            '4:42',
-            '390',
+            distance: '5,04',
+            time: '23:40', // The named parameter 'time' isn't defined.
+            pace: '4:42',
+            calories: '390',
           ),
-          const RunRecordCard('Manhã de sábado', '5,21', '27:33', '5:17', '394'),
+          const RunRecordCard(
+            'Manhã de sábado',
+            distance: '5,21',
+            time: '27:33', // The named parameter 'time' isn't defined.
+            pace: '5:17',
+            calories: '394',
+          ),
           const SizedBox(height: 24),
         ],
       ),
@@ -284,7 +290,9 @@ class ChallengesScreen extends StatelessWidget {
             // Estilização da barra de abas.
             indicatorColor: CustomColors.primary,
             labelColor: CustomColors.textLight,
-            unselectedLabelColor: CustomColors.textLight.withOpacity(0.6),
+            unselectedLabelColor: CustomColors.textLight.withAlpha(
+              (255 * 0.6).round(),
+            ),
             tabs: const [
               Tab(text: 'Conquistas'),
               Tab(text: 'Desafios'),

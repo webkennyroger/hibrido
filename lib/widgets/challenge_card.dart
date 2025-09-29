@@ -10,13 +10,13 @@ class ChallengeCard extends StatelessWidget {
   final bool isJoined;
 
   const ChallengeCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.description,
     required this.date,
     required this.icon,
     this.isJoined = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +49,7 @@ class ChallengeCard extends StatelessWidget {
             Text(
               date,
               style: GoogleFonts.lexend(
-                color: CustomColors.textLight.withOpacity(0.7),
+                color: CustomColors.textLight.withAlpha((255 * 0.7).round()),
                 fontSize: 10,
               ),
             ),
@@ -63,19 +63,23 @@ class ChallengeCard extends StatelessWidget {
                   // Lógica para entrar ou sair do desafio
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isJoined ? Colors.transparent : CustomColors.primary,
+                  backgroundColor: isJoined
+                      ? Colors.transparent
+                      : CustomColors.primary,
                   side: isJoined
                       ? BorderSide(color: CustomColors.primary, width: 1)
                       : BorderSide.none,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   padding: EdgeInsets.zero,
                 ),
                 child: Text(
                   isJoined ? 'Ingressou' : 'Ingressar',
                   style: GoogleFonts.lexend(
-                    color: isJoined ? CustomColors.primary : CustomColors.textDark,
+                    color: isJoined
+                        ? CustomColors.primary
+                        : CustomColors.textDark,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),

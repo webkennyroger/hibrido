@@ -7,8 +7,12 @@ class ActivityFilterButton extends StatelessWidget {
   final String text;
   final bool isSelected;
 
-  const ActivityFilterButton(this.icon, this.text, this.isSelected, {Key? key})
-      : super(key: key);
+  const ActivityFilterButton(
+    this.icon,
+    this.text,
+    this.isSelected, {
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
-import 'package:http/http.dart'
-    as http; // Mantido para futuras integrações, se necessário.
 
 class SpotifyService {
   // IMPORTANTE: Substitua com suas credenciais do Spotify Developer Dashboard
@@ -32,8 +30,8 @@ class SpotifyService {
 
       _isInitialized = result;
       return result;
-    } on PlatformException catch (e) {
-      print('Erro ao conectar ao Spotify SDK: ${e.code}: ${e.message}');
+    } on PlatformException {
+      // print('Erro ao conectar ao Spotify SDK: ${e.code}: ${e.message}');
       _isInitialized = false;
       return false;
     }
@@ -49,8 +47,8 @@ class SpotifyService {
     if (_isInitialized) {
       try {
         await SpotifySdk.play(spotifyUri: spotifyUri);
-      } on PlatformException catch (e) {
-        print('Erro ao tocar a música: ${e.code}: ${e.message}');
+      } on PlatformException {
+        // print('Erro ao tocar a música: ${e.code}: ${e.message}');
       }
     }
   }
@@ -70,8 +68,8 @@ class SpotifyService {
           'is_playing': !playerState.isPaused,
         };
       }
-    } on PlatformException catch (e) {
-      print('Erro ao obter o estado do player: ${e.code}: ${e.message}');
+    } on PlatformException {
+      // print('Erro ao obter o estado do player: ${e.code}: ${e.message}');
     }
     return null;
   }
