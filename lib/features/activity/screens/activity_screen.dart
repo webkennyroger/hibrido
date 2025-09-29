@@ -1,54 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import '../widgets/activity_card.dart';
 
-class ActivityScreen extends StatelessWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Dados de exemplo para o feed. No futuro, isso viria de um banco de dados.
-    final List<ActivityData> mockActivities = [
-      ActivityData(
-        userName: 'Kenny',
-        activityTitle: 'Corrida no Parque Ibirapuera',
-        runTime: 'Manhã de Domingo',
-        location: 'São Paulo, SP',
-        distanceInMeters: 5240,
-        duration: const Duration(minutes: 28, seconds: 15),
-        routePoints: const [
-          LatLng(-23.5874, -46.6576),
-          LatLng(-23.5891, -46.6582),
-          LatLng(-23.5884, -46.6623),
-          LatLng(-23.5852, -46.6612),
-        ],
-        calories: 350,
-        likes: 128,
-        comments: 12,
-        shares: 5,
-      ),
-      ActivityData(
-        userName: 'Kenny',
-        activityTitle: 'Pedal na Av. Paulista',
-        runTime: 'Tarde de Sábado',
-        location: 'São Paulo, SP',
-        distanceInMeters: 10100,
-        duration: const Duration(minutes: 45, seconds: 30),
-        routePoints: const [
-          LatLng(-23.5613, -46.6565),
-          LatLng(-23.5573, -46.6623),
-          LatLng(-23.5613, -46.6565),
-        ],
-        calories: 510,
-        likes: 256,
-        comments: 23,
-        shares: 11,
-      ),
-    ];
+  State<ActivityScreen> createState() => _ActivityScreenState();
+}
 
+class _ActivityScreenState extends State<ActivityScreen>
+    with WidgetsBindingObserver {
+  final ActivityRepository _repository = ActivityRepository();
+  late Future<List<ActivityData>> _activitiesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Carrega as atividades salvas quando a tela é iniciada.
+    _loadActivities();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Recarrega as atividades quando o app volta para o primeiro plano,
+    // garantindo que a lista esteja sempre atualizada.
+    if (state == AppLifecycleState.resumed) {
+      _loadActivities();
+    }
+  }
+
+  /// Carrega ou recarrega a lista de atividades do repositório.
+  void _loadActivities() {
+    _activitiesFuture = _repository.getActivities();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -60,14 +59,39 @@ class ActivityScreen extends StatelessWidget {
           ),
         ),
       ),
-      // A tela agora é uma lista de widgets ActivityScreen.
-      body: ListView.separated(
-        itemCount: mockActivities.length,
-        itemBuilder: (context, index) {
-          // Para cada item na lista de dados, criamos um widget de card.
-          return ActivityCard(activityData: mockActivities[index]);
+      // Usa um FutureBuilder para construir a UI com base no estado do carregamento das atividades.
+      body: FutureBuilder<List<ActivityData>>(
+        future: _activitiesFuture,
+        builder: (context, snapshot) {
+          // Mostra um indicador de progresso enquanto os dados estão carregando.
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          // Mostra uma mensagem de erro se algo der errado.
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Erro ao carregar atividades: ${snapshot.error}'),
+            );
+          }
+          // Mostra uma mensagem se não houver atividades salvas.
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text('Nenhuma atividade registrada ainda.'),
+            );
+          }
+
+          final activities = snapshot.data!;
+
+          // Constrói a lista de atividades quando os dados estiverem prontos.
+          return ListView.separated(
+            itemCount: activities.length,
+            itemBuilder: (context, index) {
+              // Para cada item na lista de dados, criamos um widget de card.
+              return ActivityCard(activityData: activities[index]);
+            },
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+          );
         },
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 
 class CommentsScreen extends StatefulWidget {
@@ -16,6 +17,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
   final TextEditingController _commentController = TextEditingController();
   GoogleMapController? _mapController;
   bool _isPostButtonEnabled = false;
+  late List<String> _comments;
+  final ActivityRepository _repository = ActivityRepository();
 
   @override
   void initState() {
@@ -26,12 +29,31 @@ class _CommentsScreenState extends State<CommentsScreen> {
         _isPostButtonEnabled = _commentController.text.trim().isNotEmpty;
       });
     });
+    _comments = List<String>.from(widget.activityData.commentsList);
   }
 
   @override
   void dispose() {
     _commentController.dispose();
+    _mapController?.dispose();
     super.dispose();
+  }
+
+  // Adiciona um novo comentário e salva
+  void _postComment() {
+    if (_commentController.text.trim().isEmpty) return;
+
+    setState(() {
+      _comments.insert(0, _commentController.text.trim());
+    });
+
+    final updatedActivity = widget.activityData.copyWith(
+      commentsList: _comments,
+    );
+    _repository.updateActivity(updatedActivity);
+
+    _commentController.clear();
+    FocusScope.of(context).unfocus(); // Esconde o teclado
   }
 
   // Calcula os limites do mapa para centralizar a rota.
@@ -78,10 +100,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
         actions: [
           TextButton(
             onPressed: _isPostButtonEnabled
-                ? () {
-                    // Lógica para postar o comentário
-                    Navigator.of(context).pop();
-                  }
+                // Ao postar, retorna a nova lista de comentários para a tela anterior
+                ? () => Navigator.of(context).pop(_comments)
                 : null,
             child: Text(
               'Postar',
@@ -221,15 +241,32 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   ),
                   const Divider(height: 1),
                   // Lista de comentários (placeholder)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 80.0),
-                    child: Center(
-                      child: Text(
-                        'Seja o primeiro a comentar!',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
+                  _comments.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 80.0),
+                          child: Center(
+                            child: Text(
+                              'Seja o primeiro a comentar!',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _comments.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              leading: const CircleAvatar(
+                                backgroundImage: NetworkImage(
+                                  'https://i.ibb.co/L8Gj18j/avatar.png',
+                                ),
+                              ),
+                              title: Text(_comments[index]),
+                            );
+                          },
+                        ),
                 ],
               ),
             ),

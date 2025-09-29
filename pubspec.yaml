@@ -34,6 +34,7 @@ dependencies:
   google_fonts: ^6.3.1
   path_provider: ^2.1.5
   share_plus: ^7.2.2 # Pacote para funcionalidade de compartilhamento
+  shared_preferences: ^2.2.3
   permission_handler: ^12.0.1
   dio: ^5.9.0
   open_file: ^3.5.10
@@ -78,6 +79,7 @@ flutter:
   assets:
   - assets/images/
   - assets/images/maps/
+  - assets/images/icons/
   - assets/map_style_dark.json
 
 
