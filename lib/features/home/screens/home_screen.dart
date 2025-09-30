@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
+import 'package:hibrido/services/spotify_service.dart';
+import 'package:spotify_sdk/spotify_sdk.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,9 +21,21 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _selectedDay;
   final CalendarFormat _calendarFormat = CalendarFormat.week;
 
+  // --- Spotify State ---
+  final SpotifyService _spotifyService = SpotifyService();
+  StreamSubscription? _playerStateSubscription;
+  bool _isPlayerVisible = false;
+  String _trackName = '';
+  String _artistName = '';
+  bool _isMusicPlaying = false;
+  ImageProvider _trackImage = const AssetImage(
+    'assets/images/spotify_placeholder.png',
+  );
+
   @override
   void initState() {
     super.initState();
+    _listenToSpotifyPlayerState();
     _pageController.addListener(() {
       setState(() {
         // int _currentPage = _pageController.page!.round();
@@ -30,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _playerStateSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -48,6 +64,34 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Ouve as mudanças no estado do player do Spotify.
+  void _listenToSpotifyPlayerState() {
+    // Primeiro, tenta conectar silenciosamente.
+    _spotifyService.initializeAndAuthenticate();
+
+    _playerStateSubscription = SpotifySdk.subscribePlayerState().listen((
+      playerState,
+    ) {
+      if (mounted) {
+        final isPlaying = playerState.track != null && !playerState.isPaused;
+        setState(() {
+          _isPlayerVisible = isPlaying;
+          if (isPlaying) {
+            _trackName = playerState.track!.name;
+            _artistName =
+                playerState.track!.artist.name ?? 'Artista desconhecido';
+            _isMusicPlaying = !playerState.isPaused;
+
+            // Busca a imagem do álbum
+            _spotifyService.getTrackImage(playerState.track!).then((image) {
+              if (mounted) setState(() => _trackImage = image);
+            });
+          }
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Scaffold é a estrutura base da tela, fornecendo appBar, body, etc.
@@ -56,69 +100,158 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: CustomColors.secondary,
       // SafeArea garante que o conteúdo não seja obstruído por elementos da interface do sistema (como o notch do celular).
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _handleRefresh,
-          // SingleChildScrollView permite que o conteúdo da tela seja rolável se exceder o tamanho da tela.
-          child: SingleChildScrollView(
-            physics:
-                const AlwaysScrollableScrollPhysics(), // Garante que o scroll sempre funcione
-            padding: const EdgeInsets.all(16.0),
-            // Column organiza os widgets filhos em uma coluna vertical.
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header do perfil
-                Row(
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _handleRefresh,
+              // SingleChildScrollView permite que o conteúdo da tela seja rolável se exceder o tamanho da tela.
+              child: SingleChildScrollView(
+                physics:
+                    const AlwaysScrollableScrollPhysics(), // Garante que o scroll sempre funcione
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 120.0),
+                // Column organiza os widgets filhos em uma coluna vertical.
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Exibe a imagem de perfil do usuário.
-                    const CircleAvatar(
-                      backgroundImage: NetworkImage(
-                        'https://placehold.co/60x60/FFFFFF/000000?text=HP',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // Header do perfil
+                    Row(
                       children: [
-                        // Texto de saudação para o usuário.
-                        Text(
-                          'KENNY ROGER',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textDark,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                        // Exibe a imagem de perfil do usuário.
+                        const CircleAvatar(
+                          backgroundImage: NetworkImage(
+                            'https://placehold.co/60x60/FFFFFF/000000?text=HP',
                           ),
                         ),
-                        // Subtítulo ou status do usuário.
-                        Text(
-                          'Hibrido',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textDark.withAlpha(
-                              (255 * 0.7).round(),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Texto de saudação para o usuário.
+                            Text(
+                              'KENNY ROGER',
+                              style: GoogleFonts.lexend(
+                                color: CustomColors.textDark,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                            fontSize: 12,
-                          ),
+                            // Subtítulo ou status do usuário.
+                            Text(
+                              'Hibrido',
+                              style: GoogleFonts.lexend(
+                                color: CustomColors.textDark.withAlpha(
+                                  (255 * 0.7).round(),
+                                ),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    // Calendário no topo
+                    // Chama o método que constrói e exibe o widget do calendário.
+                    _buildCalendar(),
+                    const SizedBox(height: 20),
+                    // Métricas do dia
+                    // Chama o método que constrói a linha de cards com as métricas da atividade.
+                    _buildMetricsCards(),
+                    const SizedBox(height: 20),
+                    // Nova seção de desafios
+                    // Chama o método que constrói o card de resumo dos desafios.
+                    _buildChallengesCard(context),
                   ],
                 ),
-                const SizedBox(height: 16),
-                // Calendário no topo
-                // Chama o método que constrói e exibe o widget do calendário.
-                _buildCalendar(),
-                const SizedBox(height: 20),
-                // Métricas do dia
-                // Chama o método que constrói a linha de cards com as métricas da atividade.
-                _buildMetricsCards(),
-                const SizedBox(height: 20),
-                // Nova seção de desafios
-                // Chama o método que constrói o card de resumo dos desafios.
-                _buildChallengesCard(context),
+              ),
+            ),
+            // Miniplayer do Spotify
+            if (_isPlayerVisible)
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: _buildMinimizedPlayer(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Constrói o widget do miniplayer de música.
+  Widget _buildMinimizedPlayer() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: CustomColors.quaternary,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image(
+              image: _trackImage,
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _trackName,
+                  style: GoogleFonts.lexend(
+                    fontWeight: FontWeight.bold,
+                    color: CustomColors.textDark,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  _artistName,
+                  style: GoogleFonts.lexend(color: Colors.grey.shade600),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
-        ),
+          IconButton(
+            icon: Icon(
+              _isMusicPlaying ? Icons.pause : Icons.play_arrow,
+              color: CustomColors.textDark,
+              size: 32,
+            ),
+            onPressed: () {
+              if (_isMusicPlaying) {
+                _spotifyService.pause();
+              } else {
+                _spotifyService.resume();
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.skip_next,
+              color: CustomColors.textDark,
+              size: 32,
+            ),
+            onPressed: () {
+              _spotifyService.skipNext();
+            },
+          ),
+        ],
       ),
     );
   }

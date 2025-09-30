@@ -91,6 +91,8 @@ class _MapScreenState extends State<MapScreen> {
   // Duração total e posição atual da música para a barra de progresso.
   int _trackDuration = 0;
   int _trackPosition = 0;
+  // Posição do player de música na tela (para arrastar).
+  Offset _playerOffset = const Offset(16, 450);
 
   // Opção de tipo de mapa selecionada pelo usuário na interface.
   MapTypeOption _selectedMapType = MapTypeOption.normal;
@@ -111,7 +113,7 @@ class _MapScreenState extends State<MapScreen> {
     _checkGpsStatus();
     _listenToGpsStatusChanges();
     _initializeMap();
-    _listenToSpotifyPlayerState();
+    _listenToSpotifyPlayerState(); // Garante que o app ouça o Spotify desde o início
   }
 
   @override
@@ -853,13 +855,15 @@ class _MapScreenState extends State<MapScreen> {
               isPlayerVisible: _isPlayerVisible,
             ),
             
-          // Botão de status do GPS (Mantido, mas movido para não colidir com o sheet)
-          Positioned(
-            bottom: (_activityState == ActivityState.notStarted || _activityState == ActivityState.finished) ? 200 : 80,
-            left: 20,
-            right: 20,
-            child: Center(child: _buildGpsButton()),
-          ),
+          // Botão de status do GPS, visível apenas antes de iniciar ou após finalizar.
+          if (_activityState == ActivityState.notStarted ||
+              _activityState == ActivityState.finished)
+            Positioned(
+              bottom: 200,
+              left: 20,
+              right: 20,
+              child: Center(child: _buildGpsButton()),
+            ),
           // Controles inferiores (Iniciar/Música/Esporte) - APENAS no estado NotStarted
           if (_activityState == ActivityState.notStarted || _activityState == ActivityState.finished)
           Positioned(
@@ -1227,141 +1231,161 @@ class _MapScreenState extends State<MapScreen> {
 
   /// Constrói o widget do player do Spotify com efeito de vidro fosco.
   Widget _buildSpotifyPlayer() {
+    // O player agora é um widget flutuante e arrastável.
     return Positioned(
-      left: 16,
-      right: 16,
-      bottom: 200,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 8,
-                ),
-                decoration: BoxDecoration(
-                  // Cor de fundo com gradiente sutil
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF2E2F3A).withOpacity(0.8),
-                      const Color(0xFF232530).withOpacity(0.8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white24, width: 1.5),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Linha com imagem, nome da música e artista
-                    Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image(
-                            image: _trackImage,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _trackName,
-                                style: GoogleFonts.lexend(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                _artistName,
-                                style: GoogleFonts.lexend(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Barra de progresso da música
-                    if (_trackDuration > 0)
-                      LinearProgressIndicator(
-                        value: _trackPosition / _trackDuration,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          CustomColors.primary,
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    // Controles de Play/Pause, Avançar, Voltar
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.skip_previous,
-                            color: Colors.white,
-                            size: 40,
-                          ),
-                          onPressed: _playPreviousTrack,
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            _isMusicPlaying
-                                ? Icons.pause_circle_filled
-                                : Icons.play_circle_filled,
-                            color: Colors.white,
-                            size: 50,
-                          ),
-                          onPressed: _handlePlayPause,
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.skip_next,
-                            color: Colors.white,
-                            size: 40,
-                          ),
-                          onPressed: _playNextTrack,
-                        ),
-                      ],
-                    ),
+      left: _playerOffset.dx,
+      top: _playerOffset.dy,
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          setState(() {
+            _playerOffset += details.delta;
+          });
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(
+              width: MediaQuery.of(context).size.width - 32, // Largura fixa
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF2E2F3A).withOpacity(0.8),
+                    const Color(0xFF232530).withOpacity(0.8),
                   ],
                 ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white24, width: 1.5),
               ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.close,
-                    color: CustomColors.tertiary,
-                    size: 24,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 8,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Linha com imagem, nome da música e artista
+                        Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image(
+                                image: _trackImage,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _trackName,
+                                    style: GoogleFonts.lexend(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    _artistName,
+                                    style: GoogleFonts.lexend(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Barra de progresso da música
+                        if (_trackDuration > 0)
+                          LinearProgressIndicator(
+                            value: _trackPosition / _trackDuration,
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              CustomColors.primary,
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        // Controles de Play/Pause, Avançar, Voltar
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.skip_previous,
+                                  color: Colors.white, size: 40),
+                              onPressed: _playPreviousTrack,
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                _isMusicPlaying
+                                    ? Icons.pause_circle_filled
+                                    : Icons.play_circle_filled,
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                              onPressed: _handlePlayPause,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.skip_next,
+                                  color: Colors.white, size: 40),
+                              onPressed: _playNextTrack,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  onPressed: () {
-                    _spotifyService.pause();
-                    setState(() => _isPlayerVisible = false);
-                  },
-                ),
+                  // Botões de controle do player (Minimizar e Fechar)
+                  _buildPlayerControls(),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  /// Constrói os botões de Minimizar e Fechar para o player de música.
+  Widget _buildPlayerControls() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Botão para MINIMIZAR (esconde o player, mas não para a música)
+        IconButton(
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: CustomColors.tertiary,
+            size: 28,
+          ),
+          onPressed: () => setState(() => _isPlayerVisible = false),
+        ),
+        // Botão para FECHAR (esconde o player e para a música)
+        IconButton(
+          icon: const Icon(
+            Icons.close,
+            color: CustomColors.tertiary,
+            size: 24,
+          ),
+          onPressed: () {
+            _spotifyService.pause();
+            setState(() => _isPlayerVisible = false);
+          },
+        ),
+      ],
     );
   }
 
