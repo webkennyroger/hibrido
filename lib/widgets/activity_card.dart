@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/activity/screens/comments_screen.dart';
 import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 
-class ActivityCard extends StatelessWidget {
+class ActivityCard extends StatefulWidget {
   final ActivityData activityData;
+  final VoidCallback onDelete; // Callback para notificar a exclusão
 
-  const ActivityCard({super.key, required this.activityData});
+  const ActivityCard({
+    super.key,
+    required this.activityData,
+    required this.onDelete,
+  });
+
+  @override
+  State<ActivityCard> createState() => _ActivityCardState();
+}
+
+class _ActivityCardState extends State<ActivityCard> {
+  late bool _isLiked;
+  late int _likesCount;
+  late int _commentsCount;
+  final ActivityRepository _repository = ActivityRepository();
 
   // Formata a duração para o formato MM:SS
   String _formatDuration(Duration duration) {
@@ -17,6 +33,15 @@ class ActivityCard extends StatelessWidget {
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
     return "$twoDigitMinutes:$twoDigitSeconds";
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializa o estado local com os dados do widget
+    _isLiked = widget.activityData.isLiked;
+    _likesCount = widget.activityData.likes;
+    _commentsCount = widget.activityData.commentsList.length;
   }
 
   // Calcula os limites do mapa para centralizar a rota.
@@ -59,7 +84,7 @@ class ActivityCard extends StatelessWidget {
             const SizedBox(height: 12),
             // Título da Atividade
             Text(
-              activityData.activityTitle,
+              widget.activityData.activityTitle,
               style: GoogleFonts.lexend(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
@@ -94,7 +119,7 @@ class ActivityCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                activityData.userName,
+                widget.activityData.userName,
                 style: GoogleFonts.lexend(
                   fontWeight: FontWeight.bold,
                   color: CustomColors.textDark,
@@ -109,7 +134,7 @@ class ActivityCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${activityData.runTime} - ${activityData.location}',
+                    '${widget.activityData.runTime} - ${widget.activityData.location}',
                     style: GoogleFonts.lexend(
                       color: Colors.grey.shade600,
                       fontSize: 12,
@@ -123,9 +148,41 @@ class ActivityCard extends StatelessWidget {
         PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'delete') {
-              // Aqui você pode adicionar a lógica para excluir a atividade,
-              // como mostrar um diálogo de confirmação.
-              // print('Excluir atividade selecionado');
+              // Mostra o diálogo de confirmação antes de excluir.
+              showDialog(
+                context: context,
+                builder: (BuildContext dialogContext) {
+                  return AlertDialog(
+                    title: const Text('Excluir Atividade'),
+                    content: const Text(
+                      'Tem certeza de que deseja excluir esta atividade? Esta ação não pode ser desfeita.',
+                    ),
+                    actions: <Widget>[
+                      TextButton(
+                        child: const Text('Cancelar'),
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop(); // Fecha o diálogo
+                        },
+                      ),
+                      TextButton(
+                        child: const Text(
+                          'Excluir',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        onPressed: () async {
+                          Navigator.of(dialogContext).pop(); // Fecha o diálogo
+                          // Chama o repositório para excluir a atividade
+                          await _repository.deleteActivity(
+                            widget.activityData.id,
+                          );
+                          // Chama o callback para notificar a tela pai
+                          widget.onDelete();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
             } else {
               // print('$value selecionado');
             }
@@ -172,25 +229,27 @@ class ActivityCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),
         child: GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: activityData.routePoints.isNotEmpty
-                ? activityData.routePoints.first
-                : const LatLng(0, 0),
-            zoom: 14,
-          ),
+          initialCameraPosition: widget.activityData.routePoints.isEmpty
+              ? const CameraPosition(target: LatLng(0, 0), zoom: 14)
+              : CameraPosition(
+                  target: _boundsFromLatLngList(
+                    widget.activityData.routePoints,
+                  ).center,
+                  zoom: 14,
+                ), // O zoom será ajustado pelo bounds
           polylines: {
             Polyline(
               polylineId: const PolylineId('route'),
-              points: activityData.routePoints,
+              points: widget.activityData.routePoints,
               color: CustomColors.primary,
               width: 4,
             ),
           },
           onMapCreated: (controller) {
-            if (activityData.routePoints.isNotEmpty) {
+            if (widget.activityData.routePoints.isNotEmpty) {
               controller.animateCamera(
                 CameraUpdate.newLatLngBounds(
-                  _boundsFromLatLngList(activityData.routePoints),
+                  _boundsFromLatLngList(widget.activityData.routePoints),
                   50.0, // padding
                 ),
               );
@@ -211,12 +270,15 @@ class ActivityCard extends StatelessWidget {
       children: [
         _buildStatItem(
           'Distância',
-          '${(activityData.distanceInMeters / 1000).toStringAsFixed(2)} km',
+          '${(widget.activityData.distanceInMeters / 1000).toStringAsFixed(2)} km',
         ),
-        _buildStatItem('Duração', _formatDuration(activityData.duration)),
+        _buildStatItem(
+          'Duração',
+          _formatDuration(widget.activityData.duration),
+        ),
         _buildStatItem(
           'Calorias',
-          '${activityData.calories.toStringAsFixed(0)} kcal',
+          '${widget.activityData.calories.toStringAsFixed(0)} kcal',
         ),
       ],
     );
@@ -242,52 +304,85 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
+  // Lógica para curtir/descurtir
+  void _toggleLike() {
+    setState(() {
+      _isLiked = !_isLiked;
+      if (_isLiked) {
+        _likesCount++;
+      } else {
+        _likesCount--;
+      }
+    });
+
+    // Cria uma cópia atualizada e salva no repositório
+    final updatedActivity = widget.activityData.copyWith(
+      likes: _likesCount,
+      isLiked: _isLiked,
+    );
+    _repository.updateActivity(updatedActivity);
+  }
+
   Widget _buildActionButtons(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
           child: _actionButton(
-            Icons.thumb_up_outlined,
-            activityData.likes,
-            () {},
+            _isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+            _likesCount,
+            _toggleLike,
+            isLiked: _isLiked,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
+          child: _actionButton(Icons.comment_outlined, _commentsCount, () async {
+            // Navega para a tela de comentários e aguarda um resultado
+            final result = await Navigator.push<List<String>>(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    CommentsScreen(activityData: widget.activityData),
+              ),
+            );
+
+            // Se a tela de comentários retornou uma nova lista, atualiza o estado
+            if (result != null) {
+              setState(() {
+                _commentsCount = result.length;
+              });
+            }
+          }),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
           child: _actionButton(
-            Icons.comment_outlined,
-            activityData.comments,
+            Icons.share_outlined,
+            widget.activityData.shares,
             () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      CommentsScreen(activityData: activityData),
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.9,
+                  child: ShareActivityScreen(activityData: widget.activityData),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _actionButton(Icons.share_outlined, activityData.shares, () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (context) => SizedBox(
-                height: MediaQuery.of(context).size.height * 0.9,
-                child: ShareActivityScreen(activityData: activityData),
-              ),
-            );
-          }),
-        ),
       ],
     );
   }
 
-  Widget _actionButton(IconData icon, int count, VoidCallback onPressed) {
+  Widget _actionButton(
+    IconData icon,
+    int count,
+    VoidCallback onPressed, {
+    bool isLiked = false,
+  }) {
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(12),
@@ -295,17 +390,24 @@ class ActivityCard extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade400, width: 1.5),
+          border: Border.all(
+            color: isLiked ? CustomColors.primary : Colors.grey.shade400,
+            width: 1.5,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.grey.shade700, size: 22),
+            Icon(
+              icon,
+              color: isLiked ? CustomColors.primary : Colors.grey.shade700,
+              size: 22,
+            ),
             const SizedBox(width: 6),
             Text(
               count.toString(),
               style: GoogleFonts.lexend(
-                color: Colors.grey.shade700,
+                color: isLiked ? CustomColors.primary : Colors.grey.shade700,
                 fontWeight: FontWeight.w600,
               ),
             ),

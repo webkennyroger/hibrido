@@ -99,16 +99,18 @@ class _AppScreenState extends State<AppScreen> {
                 size: 30,
               ),
               // Ao ser pressionado, atualiza o estado para mostrar a tela de Atividade (índice 1).
-              onPressed: () {
+              onPressed: () async {
                 // Navega para a tela do mapa.
-                Navigator.push(
+                final result = await Navigator.push<bool>(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) {
-                      return const MapScreen();
-                    },
-                  ),
+                  MaterialPageRoute(builder: (context) => const MapScreen()),
                 );
+
+                // Se a MapScreen retornar 'true', significa que uma atividade foi salva.
+                // Então, mudamos para a aba de atividades (índice 1).
+                if (result == true) {
+                  setState(() => _selectedIndex = 1);
+                }
               },
             ),
           ),

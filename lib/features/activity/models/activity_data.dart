@@ -35,6 +35,7 @@ class ActivityData {
   // Método para criar uma cópia do objeto com alguns valores alterados.
   ActivityData copyWith({
     String? id,
+    String? activityTitle,
     int? likes,
     bool? isLiked,
     List<String>? commentsList,
@@ -42,7 +43,7 @@ class ActivityData {
     return ActivityData(
       id: id ?? this.id,
       userName: userName,
-      activityTitle: activityTitle,
+      activityTitle: activityTitle ?? this.activityTitle,
       runTime: runTime,
       location: location,
       distanceInMeters: distanceInMeters,

@@ -34,6 +34,20 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Lida com a ação de "puxar para atualizar".
+  Future<void> _handleRefresh() async {
+    // Simula uma chamada de rede ou recarregamento de dados.
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Se você tiver dados que precisam ser recarregados (ex: de uma API),
+    // a lógica de recarregamento viria aqui.
+    if (mounted) {
+      setState(() {
+        // Atualiza a UI se necessário após carregar os novos dados.
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Scaffold é a estrutura base da tela, fornecendo appBar, body, etc.
@@ -42,62 +56,67 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: CustomColors.secondary,
       // SafeArea garante que o conteúdo não seja obstruído por elementos da interface do sistema (como o notch do celular).
       body: SafeArea(
-        // SingleChildScrollView permite que o conteúdo da tela seja rolável se exceder o tamanho da tela.
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          // Column organiza os widgets filhos em uma coluna vertical.
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header do perfil
-              Row(
-                children: [
-                  // Exibe a imagem de perfil do usuário.
-                  const CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      'https://placehold.co/60x60/FFFFFF/000000?text=HP',
+        child: RefreshIndicator(
+          onRefresh: _handleRefresh,
+          // SingleChildScrollView permite que o conteúdo da tela seja rolável se exceder o tamanho da tela.
+          child: SingleChildScrollView(
+            physics:
+                const AlwaysScrollableScrollPhysics(), // Garante que o scroll sempre funcione
+            padding: const EdgeInsets.all(16.0),
+            // Column organiza os widgets filhos em uma coluna vertical.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header do perfil
+                Row(
+                  children: [
+                    // Exibe a imagem de perfil do usuário.
+                    const CircleAvatar(
+                      backgroundImage: NetworkImage(
+                        'https://placehold.co/60x60/FFFFFF/000000?text=HP',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Texto de saudação para o usuário.
-                      Text(
-                        'KENNY ROGER',
-                        style: GoogleFonts.lexend(
-                          color: CustomColors.textDark,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      // Subtítulo ou status do usuário.
-                      Text(
-                        'Hibrido',
-                        style: GoogleFonts.lexend(
-                          color: CustomColors.textDark.withAlpha(
-                            (255 * 0.7).round(),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Texto de saudação para o usuário.
+                        Text(
+                          'KENNY ROGER',
+                          style: GoogleFonts.lexend(
+                            color: CustomColors.textDark,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                          fontSize: 12,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Calendário no topo
-              // Chama o método que constrói e exibe o widget do calendário.
-              _buildCalendar(),
-              const SizedBox(height: 20),
-              // Métricas do dia
-              // Chama o método que constrói a linha de cards com as métricas da atividade.
-              _buildMetricsCards(),
-              const SizedBox(height: 20),
-              // Nova seção de desafios
-              // Chama o método que constrói o card de resumo dos desafios.
-              _buildChallengesCard(context),
-            ],
+                        // Subtítulo ou status do usuário.
+                        Text(
+                          'Hibrido',
+                          style: GoogleFonts.lexend(
+                            color: CustomColors.textDark.withAlpha(
+                              (255 * 0.7).round(),
+                            ),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Calendário no topo
+                // Chama o método que constrói e exibe o widget do calendário.
+                _buildCalendar(),
+                const SizedBox(height: 20),
+                // Métricas do dia
+                // Chama o método que constrói a linha de cards com as métricas da atividade.
+                _buildMetricsCards(),
+                const SizedBox(height: 20),
+                // Nova seção de desafios
+                // Chama o método que constrói o card de resumo dos desafios.
+                _buildChallengesCard(context),
+              ],
+            ),
           ),
         ),
       ),

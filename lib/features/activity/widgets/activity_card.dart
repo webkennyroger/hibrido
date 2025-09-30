@@ -9,8 +9,13 @@ import 'package:hibrido/core/theme/custom_colors.dart';
 
 class ActivityCard extends StatefulWidget {
   final ActivityData activityData;
+  final VoidCallback onDelete; // Callback para notificar a exclusão
 
-  const ActivityCard({super.key, required this.activityData});
+  const ActivityCard({
+    super.key,
+    required this.activityData,
+    required this.onDelete,
+  });
 
   @override
   State<ActivityCard> createState() => _ActivityCardState();
@@ -143,9 +148,41 @@ class _ActivityCardState extends State<ActivityCard> {
         PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'delete') {
-              // Aqui você pode adicionar a lógica para excluir a atividade,
-              // como mostrar um diálogo de confirmação.
-              // print('Excluir atividade selecionado');
+              // Mostra o diálogo de confirmação antes de excluir.
+              showDialog(
+                context: context,
+                builder: (BuildContext dialogContext) {
+                  return AlertDialog(
+                    title: const Text('Excluir Atividade'),
+                    content: const Text(
+                      'Tem certeza de que deseja excluir esta atividade? Esta ação não pode ser desfeita.',
+                    ),
+                    actions: <Widget>[
+                      TextButton(
+                        child: const Text('Cancelar'),
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop(); // Fecha o diálogo
+                        },
+                      ),
+                      TextButton(
+                        child: const Text(
+                          'Excluir',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        onPressed: () async {
+                          Navigator.of(dialogContext).pop(); // Fecha o diálogo
+                          // Chama o repositório para excluir a atividade
+                          await _repository.deleteActivity(
+                            widget.activityData.id,
+                          );
+                          // Chama o callback para notificar a tela pai
+                          widget.onDelete();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
             } else {
               // print('$value selecionado');
             }

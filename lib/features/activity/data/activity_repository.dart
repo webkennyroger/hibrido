@@ -49,6 +49,21 @@ class ActivityRepository {
     }
   }
 
+  /// Exclui uma atividade da lista com base no seu ID.
+  Future<void> deleteActivity(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingActivities = await getActivities();
+
+    // Remove a atividade que corresponde ao ID fornecido.
+    existingActivities.removeWhere((activity) => activity.id == id);
+
+    // Converte a lista atualizada de volta para JSON.
+    final List<String> activitiesJson = existingActivities
+        .map((activity) => json.encode(activity.toJson()))
+        .toList();
+    await prefs.setStringList(_activitiesKey, activitiesJson);
+  }
+
   /// Recupera a lista de todas as atividades salvas.
   Future<List<ActivityData>> getActivities() async {
     final prefs = await SharedPreferences.getInstance();

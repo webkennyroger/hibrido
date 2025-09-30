@@ -6,10 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+// Certifique-se de que o caminho para o seu arquivo de cores está correto
 import 'package:hibrido/core/theme/custom_colors.dart';
+// Certifique-se de que os caminhos para os arquivos de dados e tela estão corretos
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/activity/screens/activity_detail_screen.dart';
+import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart';
 import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 
@@ -26,7 +29,7 @@ enum ActivityState { notStarted, running, paused, finished }
 /// Enum para as opções de tipo de mapa disponíveis para o usuário.
 enum MapTypeOption { normal, satellite, hybrid }
 
-// NOVO: Enum para as opções de esporte.
+/// Enum para as opções de esporte.
 enum SportOption { corrida, pedalada, caminhada }
 
 class _MapScreenState extends State<MapScreen> {
@@ -35,8 +38,7 @@ class _MapScreenState extends State<MapScreen> {
   // Posição geográfica atual do usuário.
   Position? _currentPosition;
   // Conjunto de marcadores a serem exibidos no mapa (ex: localização atual).
-  final Set<Marker> _markers =
-      {}; // Usado para polilinhas, não para a localização atual
+  final Set<Marker> _markers = {};
   // Tipo atual do mapa (normal, satélite, etc.).
   MapType _currentMapType = MapType.normal;
   // Inclinação atual da câmera do mapa para a visualização 3D.
@@ -59,6 +61,10 @@ class _MapScreenState extends State<MapScreen> {
   double _totalDistanceInMeters = 0.0;
   // Estimativa de calorias queimadas durante a atividade.
   double _caloriesBurned = 0.0;
+  // NOVO: Ritmo atual (min/km)
+  String _currentPaceText = '00:00';
+  // NOVO: Ritmo médio (min/km)
+  String _averagePaceText = '00:00';
   // Lista de coordenadas geográficas que compõem a rota percorrida.
   final List<LatLng> _routePoints = [];
   // Inscrição no stream de atualizações de posição do Geolocator.
@@ -79,15 +85,21 @@ class _MapScreenState extends State<MapScreen> {
   bool _isMusicPlaying = false;
   // Flag que indica se o app está conectado ao Spotify.
   bool _isSpotifyConnected = false;
+  // Imagem do álbum da música atual.
+  ImageProvider _trackImage =
+      const AssetImage('assets/images/spotify_placeholder.png');
+  // Duração total e posição atual da música para a barra de progresso.
+  int _trackDuration = 0;
+  int _trackPosition = 0;
 
   // Opção de tipo de mapa selecionada pelo usuário na interface.
   MapTypeOption _selectedMapType = MapTypeOption.normal;
   // Controla a visibilidade do seletor de tipos de mapa.
   bool _showMapOptions = false;
 
-  // NOVO: Opção de esporte selecionada pelo usuário.
+  // Opção de esporte selecionada pelo usuário.
   SportOption _selectedSport = SportOption.corrida;
-  // NOVO: Controla a visibilidade do seletor de esportes.
+  // Controla a visibilidade do seletor de esportes.
   bool _showSportSelector = false;
 
   // Ícone customizado para o marcador de localização.
@@ -127,23 +139,22 @@ class _MapScreenState extends State<MapScreen> {
     final Canvas canvas = Canvas(pictureRecorder);
     const double size = 100.0; // Tamanho total do ícone, incluindo sombra
     const double center = size / 2;
-
+    
     // Raio do círculo azul
     const double blueRadius = size / 3 - 4;
-
+    
     // =========================================================================
     // 1. Desenha o "farol" (cone) de direção - Translúcido e Grande
     // O cone aponta para cima (direção 0), e será rotacionado pelo Marker.
     // =========================================================================
-    final Paint farolHaloPaint = Paint()
-      ..color = Colors.white.withOpacity(0.2); // Halo branco translúcido
+    final Paint farolHaloPaint = Paint()..color = Colors.white.withOpacity(0.2); // Halo branco translúcido
     final farolPath = Path()
       ..moveTo(center, center) // Começa no centro do círculo
       ..lineTo(center - 30, center - 120) // Ponto lateral esquerdo (mais longe)
       ..lineTo(center + 30, center - 120) // Ponto lateral direito (mais longe)
       ..close();
     canvas.drawPath(farolPath, farolHaloPaint);
-
+    
     // =========================================================================
     // 2. Desenha o círculo azul, borda e sombra (por cima do farol)
     // =========================================================================
@@ -152,7 +163,11 @@ class _MapScreenState extends State<MapScreen> {
     final Paint shadowPaint = Paint()
       ..color = Colors.black.withOpacity(0.2)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawCircle(const Offset(center, center), size / 2 - 5, shadowPaint);
+    canvas.drawCircle(
+      const Offset(center, center),
+      size / 2 - 5,
+      shadowPaint,
+    );
 
     // Desenha a borda branca (círculo maior)
     final Paint whitePaint = Paint()..color = Colors.white;
@@ -160,7 +175,11 @@ class _MapScreenState extends State<MapScreen> {
 
     // Desenha o círculo azul interno
     final Paint bluePaint = Paint()..color = Colors.blue.shade700;
-    canvas.drawCircle(const Offset(center, center), blueRadius, bluePaint);
+    canvas.drawCircle(
+      const Offset(center, center),
+      blueRadius,
+      bluePaint,
+    );
 
     final img = await pictureRecorder.endRecording().toImage(
       size.toInt(),
@@ -257,6 +276,17 @@ class _MapScreenState extends State<MapScreen> {
           _trackName = playerState.track?.name ?? 'Música desconhecida';
           _artistName =
               playerState.track?.artist.name ?? 'Artista desconhecido';
+          _trackDuration = playerState.track?.duration ?? 0;
+          _trackPosition = playerState.playbackPosition;
+
+          // Busca a imagem do álbum se a faixa for nova.
+          if (playerState.track != null) {
+            _spotifyService.getTrackImage(playerState.track!).then((image) {
+              if (mounted) {
+                setState(() => _trackImage = image);
+              }
+            });
+          }
         });
       }
     });
@@ -348,6 +378,8 @@ class _MapScreenState extends State<MapScreen> {
           _polylines.clear();
           _totalDistanceInMeters = 0.0;
           _caloriesBurned = 0.0;
+          _currentPaceText = '00:00';
+          _averagePaceText = '00:00';
           _activityState = ActivityState.running;
           _stopwatch.start();
           _startTimer();
@@ -377,15 +409,10 @@ class _MapScreenState extends State<MapScreen> {
     _stopwatch.stop();
     _timer?.cancel();
     _positionStreamSubscription?.cancel();
-
-    // 2. Atualiza o estado da atividade localmente
-    setState(() {
-      _activityState = ActivityState.finished;
-    });
-
-    // 3. Cria um objeto com os dados da atividade finalizada.
-    final activityData = ActivityData(
-      id: DateTime.now().millisecondsSinceEpoch.toString(), // ID único
+    
+    // 2. Cria um objeto ActivityData TEMPORÁRIO com os dados finais.
+    final tempActivityData = ActivityData(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
       userName: 'Kenny',
       activityTitle: _getSportLabel(_selectedSport),
       runTime: 'Manhã de Quarta-feira',
@@ -395,29 +422,60 @@ class _MapScreenState extends State<MapScreen> {
       routePoints: List.from(_routePoints),
       calories: _caloriesBurned,
       likes: 0,
+      commentsList: [],
       shares: 0,
     );
 
-    // 4. Salva a atividade no dispositivo (OPERAÇÃO ASSÍNCRONA)
-    await _saveActivity(activityData);
-
-    // 5. Navega para a tela de detalhes da atividade.
-    Navigator.push(
+    // 3. Navega para a tela de confirmação (FinishedConfirmationSheet)
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ActivityDetailScreen(activityData: activityData),
+        fullscreenDialog: true,
+        builder: (context) => FinishedConfirmationSheet(
+          activityData: tempActivityData,
+          // Ação: Salvar, aplicar o novo título e Navegar
+          onSaveAndNavigate: (newTitle) async {
+            // 3a. Cria a ActivityData FINAL com o título atualizado.
+            final finalActivityData = tempActivityData.copyWith(
+              activityTitle: newTitle,
+            );
+
+            // 3b. Salva a atividade
+            await _saveActivity(finalActivityData);
+
+            // 3c. Fecha a tela de confirmação e a tela do mapa, retornando 'true' para indicar sucesso.
+            Navigator.of(context).pop(true); // Pop FinishedConfirmationSheet
+          },
+          // Ação: Descartar a Atividade
+          onDiscard: () {
+            Navigator.of(context).pop(); // Fecha a tela de confirmação
+            _resetActivityState(); // Reseta o estado.
+          },
+        ),
       ),
-    ).then((_) {
-      // 6. Reseta o estado da tela após retornar dos detalhes.
-      setState(() {
-        _activityState = ActivityState.notStarted;
-        _stopwatch.reset();
-        _durationText = '00:00';
-        _totalDistanceInMeters = 0.0;
-        _caloriesBurned = 0.0;
-        _routePoints.clear();
-        _polylines.clear();
-      });
+    );
+
+    // 4. Se o resultado do Navigator.push for 'true' (atividade salva), fecha a MapScreen.
+    if (context.mounted && (await result as bool? ?? false)) {
+      Navigator.of(context).pop(true); // Pop MapScreen
+    }
+  }
+
+  /// NOVO: Método para resetar o estado da tela de mapa.
+  void _resetActivityState() {
+    if (!mounted) return;
+    setState(() {
+      _activityState = ActivityState.notStarted;
+      _stopwatch.reset();
+      _durationText = '00:00';
+      _totalDistanceInMeters = 0.0;
+      _caloriesBurned = 0.0;
+      _currentPaceText = '00:00';
+      _averagePaceText = '00:00';
+      _routePoints.clear();
+      _polylines.clear();
+      // Você também pode querer centralizar o mapa novamente aqui
+      _centerOnLocation();
     });
   }
 
@@ -466,12 +524,10 @@ class _MapScreenState extends State<MapScreen> {
             icon: _locationMarkerIcon ?? BitmapDescriptor.defaultMarker,
             anchor: const Offset(0.5, 0.5),
             flat: true,
-            rotation:
-                position.heading, // Atualiza a direção do marcador (farol)
+            rotation: position.heading, // Atualiza a direção do marcador (farol)
           );
 
           // Remove o marcador antigo e adiciona o novo.
-          // Usar `removeWhere` e `add` é mais seguro do que tentar modificar o Set.
           _markers.removeWhere(
             (marker) => marker.markerId.value == 'currentLocation',
           );
@@ -487,12 +543,44 @@ class _MapScreenState extends State<MapScreen> {
                 position.latitude,
                 position.longitude,
               );
+              
               // Atualiza a distância e as calorias.
               _totalDistanceInMeters += distance;
               // NOTA: A lógica de cálculo de calorias deve considerar o esporte
               // e o peso do usuário para ser mais precisa.
               _caloriesBurned = _totalDistanceInMeters / 16;
+              
+              // Cálculo e atualização do Ritmo
+              final totalDistanceInKm = _totalDistanceInMeters / 1000;
+              final totalTimeInSeconds = _stopwatch.elapsed.inSeconds;
+
+              // Ritmo Médio (Pace Average)
+              if (totalDistanceInKm > 0.05) { // Evita divisão por zero ou ritmo infinito no início
+                final averagePaceSecondsPerKm = totalTimeInSeconds / totalDistanceInKm;
+                
+                final avgPaceMinutes = (averagePaceSecondsPerKm / 60).floor();
+                final avgPaceSeconds = (averagePaceSecondsPerKm % 60).round();
+                _averagePaceText =
+                    '${avgPaceMinutes.toString().padLeft(2, '0')}:${avgPaceSeconds.toString().padLeft(2, '0')}';
+              } else {
+                _averagePaceText = '00:00';
+              }
+
+              // Ritmo Atual (Pace Current)
+              final currentVelocityMps = position.speed; // Velocidade em m/s
+              if (currentVelocityMps > 0.5) { // Se estiver se movendo
+                  final paceSecondsPerMeter = 1 / currentVelocityMps;
+                  final paceSecondsPerKm = paceSecondsPerMeter * 1000;
+                  
+                  final curPaceMinutes = (paceSecondsPerKm / 60).floor();
+                  final curPaceSeconds = (paceSecondsPerKm % 60).round();
+                  _currentPaceText =
+                      '${curPaceMinutes.toString().padLeft(2, '0')}:${curPaceSeconds.toString().padLeft(2, '0')}';
+              } else {
+                  _currentPaceText = '00:00'; // Parado ou muito lento
+              }
             }
+            
             _routePoints.add(LatLng(position.latitude, position.longitude));
 
             // Adiciona a nova polilinha (ou atualiza a existente) ao mapa.
@@ -724,7 +812,7 @@ class _MapScreenState extends State<MapScreen> {
           if (_activityState == ActivityState.notStarted &&
               !_showSportSelector) // Esconde quando o seletor de esporte estiver aberto
             Positioned(
-              bottom: 200,
+              bottom: 240, // Ajuste para subir os botões
               right: 20,
               child: Column(
                 children: [
@@ -747,47 +835,45 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
             ),
-          // Cards de estatísticas (Distância, Duração, Calorias).
-          Positioned(
-            top: 120,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatsCard(
-                  (_totalDistanceInMeters / 1000).toStringAsFixed(2),
-                  'km',
-                  'Distância',
-                ),
-                _buildStatsCard(_durationText, '', 'Duração'),
-                _buildStatsCard(
-                  _caloriesBurned.toStringAsFixed(0),
-                  'kcal',
-                  'Calorias',
-                ),
-              ],
+          
+          // NOVO: Widget de Estatísticas Detalhadas Redimensionável (Running/Paused)
+          if (_activityState == ActivityState.running ||
+              _activityState == ActivityState.paused)
+            _ActivityStatsSheet(
+              durationText: _durationText,
+              distanceInKm: (_totalDistanceInMeters / 1000).toStringAsFixed(2),
+              currentPace: _currentPaceText,
+              onMusic: _toggleSpotifyPlayer,
+              onSportSelect: _toggleSportSelector,
+              averagePace: _averagePaceText,
+              calories: _caloriesBurned.toStringAsFixed(0),
+              activityState: _activityState,
+              onPause: _onMainActionButtonPressed,
+              onStop: _onStopButtonPressed,
+              isPlayerVisible: _isPlayerVisible,
             ),
-          ),
-          // Botão de status do GPS.
+            
+          // Botão de status do GPS (Mantido, mas movido para não colidir com o sheet)
           Positioned(
-            bottom: 200,
+            bottom: (_activityState == ActivityState.notStarted || _activityState == ActivityState.finished) ? 200 : 80,
             left: 20,
             right: 20,
             child: Center(child: _buildGpsButton()),
           ),
-          // Controles inferiores (Iniciar/Pausar/Retomar/Concluir).
+          // Controles inferiores (Iniciar/Música/Esporte) - APENAS no estado NotStarted
+          if (_activityState == ActivityState.notStarted || _activityState == ActivityState.finished)
           Positioned(
             bottom: 80,
             left: 0,
             right: 0,
             child: _buildBottomControls(),
           ),
+          
           // Player do Spotify, visível quando ativado.
           if (_isPlayerVisible) _buildSpotifyPlayer(),
           // Seletor de tipo de mapa, visível quando ativado.
           if (_showMapOptions) _buildMapOptionSelector(),
-          // NOVO: Seletor de esporte, visível quando ativado.
+          // Seletor de esporte, visível quando ativado.
           if (_showSportSelector) _buildSportSelector(),
         ],
       ),
@@ -967,7 +1053,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   //================================================================================
-  // NOVO: Widgets do Seletor de Esporte
+  // Widgets do Seletor de Esporte
   //================================================================================
 
   /// Constrói o painel inferior para selecionar o esporte (baseado na imagem).
@@ -1040,7 +1126,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  /// Constrói a linha dos esportes principais (Corrida, Pedalada, Crossfit).
+  /// Constrói a linha dos esportes principais (Corrida, Pedalada, Caminhada).
   Widget _buildMainSportsRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1157,44 +1243,72 @@ class _MapScreenState extends State<MapScreen> {
                   horizontal: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: CustomColors.primary.withAlpha((255 * 0.25).round()),
+                  // Cor de fundo com gradiente sutil
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF2E2F3A).withOpacity(0.8),
+                      const Color(0xFF232530).withOpacity(0.8),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white24, width: 1.5),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                      child: Column(
-                        children: [
-                          Text(
-                            _trackName,
-                            style: GoogleFonts.lexend(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
+                    // Linha com imagem, nome da música e artista
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image(
+                            image: _trackImage,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _artistName,
-                            style: GoogleFonts.lexend(
-                              color: Colors.white.withAlpha(
-                                // This was already corrected in the provided file.
-                                (255 * 0.7).round(),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _trackName,
+                                style: GoogleFonts.lexend(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              fontSize: 12,
-                            ),
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
+                              Text(
+                                _artistName,
+                                style: GoogleFonts.lexend(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
+                    // Barra de progresso da música
+                    if (_trackDuration > 0)
+                      LinearProgressIndicator(
+                        value: _trackPosition / _trackDuration,
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          CustomColors.primary,
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    // Controles de Play/Pause, Avançar, Voltar
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -1255,20 +1369,15 @@ class _MapScreenState extends State<MapScreen> {
   Widget _buildBottomControls() {
     switch (_activityState) {
       case ActivityState.running:
-        return _RunningControls(onPressed: _onMainActionButtonPressed);
       case ActivityState.paused:
-        return _PausedControls(
-          onResume: _onMainActionButtonPressed,
-          onStop: _onStopButtonPressed,
-        );
+        // Controles Running/Paused agora estão dentro do _ActivityStatsSheet
+        return const SizedBox.shrink(); 
       case ActivityState.notStarted:
       case ActivityState.finished:
         return _NotStartedControls(
           onStart: _onMainActionButtonPressed,
           onMusic: _toggleSpotifyPlayer,
-          // NOVO: Passa a função de alternar o seletor de esporte
           onSportSelect: _toggleSportSelector,
-          // NOVO: Passa o esporte selecionado
           selectedSport: _selectedSport,
           getSportLabel: _getSportLabel,
           getSportIconPath: _getSportIconPath,
@@ -1294,60 +1403,6 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
         child: child,
-      ),
-    );
-  }
-
-  /// Constrói um card de estatística individual (ex: Distância).
-  Widget _buildStatsCard(String value, String unit, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      width: 110,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((255 * 0.1).round()),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          RichText(
-            text: TextSpan(
-              style: GoogleFonts.lexend(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              children: [
-                TextSpan(
-                  text: value,
-                  style: const TextStyle(color: CustomColors.textDark),
-                ),
-                TextSpan(
-                  text: ' $unit',
-                  style: TextStyle(
-                    color: CustomColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.lexend(
-              color: CustomColors.tertiary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1424,7 +1479,7 @@ class _MapScreenState extends State<MapScreen> {
 class _NotStartedControls extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onMusic;
-  // NOVO: Propriedades para seleção de esporte
+  // Propriedades para seleção de esporte
   final VoidCallback onSportSelect;
   final SportOption selectedSport;
   final String Function(SportOption) getSportLabel;
@@ -1453,7 +1508,7 @@ class _NotStartedControls extends StatelessWidget {
           onTap: onMusic,
         ),
         _buildStartButton(),
-        // NOVO: Usa a função de seleção de esporte e o esporte atual
+        // Usa a função de seleção de esporte e o esporte atual
         _buildIconWithLabel(
           icon: getSportIconPath(selectedSport),
           label: getSportLabel(selectedSport),
@@ -1715,6 +1770,348 @@ class _PausedControls extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Widget que gerencia o DraggableScrollableSheet com as estatísticas detalhadas
+/// e os controles da atividade (Running/Paused).
+class _ActivityStatsSheet extends StatelessWidget {
+  final String durationText;
+  final String distanceInKm;
+  final String currentPace;
+  final String averagePace;
+  final String calories;
+  final ActivityState activityState;
+  final VoidCallback onPause;
+  final VoidCallback onStop;
+  final VoidCallback onMusic;
+  final VoidCallback onSportSelect;
+  final bool isPlayerVisible;
+
+  const _ActivityStatsSheet({
+    required this.durationText,
+    required this.distanceInKm,
+    required this.currentPace,
+    required this.averagePace,
+    required this.calories,
+    required this.activityState,
+    required this.onPause,
+    required this.onStop,
+    required this.onMusic,
+    required this.onSportSelect,
+    required this.isPlayerVisible,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Controlador para acessar o estado do sheet.
+    final DraggableScrollableController sheetController = DraggableScrollableController();
+
+    // Define a altura mínima (minimizado) e máxima (tela cheia)
+    // 0.85 para tela cheia (como na primeira imagem)
+    // 0.2 para minimizado (como na segunda imagem)
+    const double minHeight = 0.2; 
+    const double maxHeight = 0.85;
+
+    // O DraggableScrollableSheet gerencia o redimensionamento por arraste.
+    return DraggableScrollableSheet(
+      initialChildSize: maxHeight, // Começa em tela cheia ao iniciar a corrida.
+      minChildSize: minHeight,
+      maxChildSize: maxHeight,
+      controller: sheetController,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF232530),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: SingleChildScrollView(
+            // Usa o scrollController do DraggableScrollableSheet para gerenciar o arraste
+            controller: scrollController,
+            child: Column(
+              children: [
+                // === Handle de Arraste/Minimizar ===
+                GestureDetector(
+                  onTap: () {
+                    // Implementa a função de clique: alterna entre minimizado e expandido
+                    if (sheetController.size > minHeight + 0.05) { // Se estiver perto do máximo
+                      sheetController.animateTo(
+                        minHeight,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    } else { // Se estiver perto do mínimo
+                      sheetController.animateTo(
+                        maxHeight,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Center(
+                      child: Container(
+                        height: 4,
+                        width: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // === Estatísticas Detalhadas ===
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Column(
+                    children: [
+                      // Linha da Duração (Tempo) com o ícone de Minimizar
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildMainStat(
+                            'DURAÇÃO',
+                            durationText,
+                            ' ',
+                            large: true,
+                            alignment: CrossAxisAlignment.start,
+                          ),
+                          // Ícone de Minimizar/Maximizar
+                          GestureDetector(
+                            onTap: () {
+                                // Alterna o tamanho do sheet ao clicar
+                                if (sheetController.size > minHeight + 0.05) {
+                                    sheetController.animateTo(
+                                      minHeight,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                } else {
+                                    sheetController.animateTo(
+                                      maxHeight,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.1),
+                              ),
+                              child: const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      // Linha da Distância (Km)
+                      _buildMainStat(
+                        'DISTÂNCIA',
+                        distanceInKm,
+                        'km',
+                        large: true,
+                        alignment: CrossAxisAlignment.start,
+                      ),
+                      const SizedBox(height: 40),
+                      
+                      // Linha de Ritmos
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildMainStat(
+                            'RITMO ATUAL',
+                            currentPace,
+                            '/km',
+                            large: false,
+                            alignment: CrossAxisAlignment.start,
+                          ),
+                          _buildMainStat(
+                            'RITMO MÉDIO',
+                            averagePace,
+                            '/km',
+                            large: false,
+                            alignment: CrossAxisAlignment.end,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 40),
+                      
+                      // Linha de Calorias
+                      _buildCalorieStat(calories),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 40),
+                
+                // === Controles (Pause/Stop/Retomar) ===
+                activityState == ActivityState.running
+                    ? _RunningControls(onPressed: onPause)
+                    : _PausedControls(onResume: onPause, onStop: onStop),
+                
+                const SizedBox(height: 20),
+                
+                // Botões de Música e Esporte (na tela minimizada - Pausado)
+                if (activityState == ActivityState.paused)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                     _buildSmallActionButton(
+                      Icons.music_note_outlined,
+                      CustomColors.tertiary,
+                      onTap: onMusic,
+                      // Destaca se o player estiver visível
+                      isHighlighted: isPlayerVisible, 
+                    ),
+                    const SizedBox(width: 15),
+                    _buildSmallActionButton(
+                      Icons.directions_run, // Placeholder para o seletor de esporte
+                      CustomColors.tertiary,
+                      onTap: onSportSelect,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Constrói o layout de estatística principal (Ritmo, Duração, Distância)
+  Widget _buildMainStat(
+    String label,
+    String value,
+    String unit, {
+    required bool large,
+    CrossAxisAlignment alignment = CrossAxisAlignment.center,
+  }) {
+    return Column(
+      crossAxisAlignment: alignment,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.lexend(
+            color: Colors.white.withOpacity(0.5),
+            fontSize: large ? 16 : 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 8),
+        RichText(
+          text: TextSpan(
+            style: GoogleFonts.lexend(
+              fontSize: large ? 60 : 40,
+              fontWeight: FontWeight.w800,
+              height: 1.0,
+            ),
+            children: [
+              TextSpan(
+                text: value,
+                style: const TextStyle(color: Colors.white),
+              ),
+              TextSpan(
+                text: ' $unit',
+                style: GoogleFonts.lexend(
+                  color: CustomColors.primary,
+                  fontSize: large ? 24 : 18,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Constrói o layout de estatística de calorias
+  Widget _buildCalorieStat(String value) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        children: [
+          const Divider(color: Colors.white12, thickness: 1),
+          const SizedBox(height: 16),
+          Text(
+            'CALORIAS QUEIMADAS',
+            style: GoogleFonts.lexend(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          RichText(
+            text: TextSpan(
+              style: GoogleFonts.lexend(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                height: 1.0,
+              ),
+              children: [
+                TextSpan(
+                  text: value,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                TextSpan(
+                  text: ' kcal',
+                  style: GoogleFonts.lexend(
+                    color: CustomColors.primary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Constrói um botão de ação circular pequeno (usado no estado Pausado)
+  Widget _buildSmallActionButton(IconData icon, Color color, {VoidCallback? onTap, bool isHighlighted = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isHighlighted ? CustomColors.primary : CustomColors.secondary,
+          boxShadow: [
+            BoxShadow(
+              color: isHighlighted ? CustomColors.primary.withAlpha(100) : Colors.black.withAlpha(50),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: isHighlighted ? CustomColors.tertiary : color, size: 30),
       ),
     );
   }

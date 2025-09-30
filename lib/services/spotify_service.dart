@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
+import 'package:spotify_sdk/models/track.dart';
 
 class SpotifyService {
   // IMPORTANTE: Substitua com suas credenciais do Spotify Developer Dashboard
@@ -72,6 +75,23 @@ class SpotifyService {
       // print('Erro ao obter o estado do player: ${e.code}: ${e.message}');
     }
     return null;
+  }
+
+  /// Busca a imagem de uma faixa e a retorna como um ImageProvider.
+  Future<ImageProvider> getTrackImage(Track track) async {
+    try {
+      Uint8List? imageBytes = await SpotifySdk.getImage(
+        imageUri: track.imageUri,
+        dimension: ImageDimension.thumbnail,
+      );
+      if (imageBytes != null) {
+        return MemoryImage(imageBytes);
+      }
+    } catch (e) {
+      // print('Erro ao buscar imagem da faixa: $e');
+    }
+    // Retorna uma imagem placeholder em caso de erro ou se não houver imagem.
+    return const AssetImage('assets/images/spotify_placeholder.png');
   }
 
   // Métodos de controle do player

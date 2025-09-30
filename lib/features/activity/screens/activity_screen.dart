@@ -75,21 +75,39 @@ class _ActivityScreenState extends State<ActivityScreen>
           }
           // Mostra uma mensagem se não houver atividades salvas.
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text('Nenhuma atividade registrada ainda.'),
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  'Não tem atividades',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.lexend(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: CustomColors.textDark.withOpacity(0.5),
+                  ),
+                ),
+              ),
             );
           }
 
           final activities = snapshot.data!;
 
           // Constrói a lista de atividades quando os dados estiverem prontos.
-          return ListView.separated(
-            itemCount: activities.length,
-            itemBuilder: (context, index) {
-              // Para cada item na lista de dados, criamos um widget de card.
-              return ActivityCard(activityData: activities[index]);
-            },
-            separatorBuilder: (context, index) => const SizedBox(height: 8),
+          // Adiciona o RefreshIndicator para permitir "puxar para atualizar".
+          return RefreshIndicator(
+            onRefresh: () async => _loadActivities(),
+            child: ListView.separated(
+              itemCount: activities.length,
+              itemBuilder: (context, index) {
+                // Para cada item na lista de dados, criamos um widget de card.
+                return ActivityCard(
+                  activityData: activities[index],
+                  onDelete: _loadActivities, // Passa a função de recarregar
+                );
+              },
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+            ),
           );
         },
       ),
