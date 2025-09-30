@@ -1577,6 +1577,70 @@ class _RunningControls extends StatelessWidget {
   }
 }
 
+/// Constrói um botão de ação para os controles de Pausa (Retomar/Concluir).
+Widget _buildActionButton(
+  IconData icon,
+  Color color, {
+  VoidCallback? onTap,
+  bool isPrimary = false,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 70, // Tamanho consistente
+      height: 70,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isPrimary ? CustomColors.primary : CustomColors.secondary,
+        boxShadow: [
+          BoxShadow(
+            color: isPrimary
+                ? CustomColors.primary.withAlpha(100)
+                : Colors.black.withAlpha(50),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: color, size: 35),
+    ),
+  );
+}
+
+/// Constrói um botão de ação circular pequeno (usado no estado Pausado)
+Widget _buildSmallActionButton(
+  IconData icon,
+  Color color, {
+  VoidCallback? onTap,
+  bool isHighlighted = false,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isHighlighted ? CustomColors.primary : CustomColors.secondary,
+        boxShadow: [
+          BoxShadow(
+            color: isHighlighted
+                ? CustomColors.primary.withAlpha(100)
+                : Colors.black.withAlpha(50),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        color: isHighlighted ? CustomColors.tertiary : color,
+        size: 30,
+      ),
+    ),
+  );
+}
+
 /// Widget que exibe os controles quando a atividade está pausada.
 class _PausedControls extends StatelessWidget {
   final VoidCallback onResume;
@@ -1587,84 +1651,19 @@ class _PausedControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [_buildPlayButton(), _buildStopButton()],
-    );
-  }
-
-  /// Constrói o botão "RETOMAR".
-  Widget _buildPlayButton() {
-    return GestureDetector(
-      onTap: onResume,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(50),
-          color: CustomColors.primary,
-          boxShadow: [
-            BoxShadow(
-              color: CustomColors.primary.withAlpha((255 * 0.4).round()),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Botão Concluir (Stop) - Agora com o mesmo estilo do botão de música
+        _buildActionButton(Icons.stop, CustomColors.tertiary, onTap: onStop),
+        const SizedBox(width: 20),
+        // Botão Retomar (Play)
+        _buildActionButton(
+          Icons.play_arrow,
+          CustomColors.tertiary,
+          onTap: onResume,
+          isPrimary: true, // Destaca o botão de retomar
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.play_arrow,
-              color: CustomColors.tertiary,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'RETOMAR',
-              style: GoogleFonts.lexend(
-                color: CustomColors.tertiary,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Constrói o botão "CONCLUIR".
-  Widget _buildStopButton() {
-    return GestureDetector(
-      onTap: onStop,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(50),
-          color: CustomColors.secondary,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha((255 * 0.1).round()),
-              blurRadius: 5,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.stop, color: CustomColors.tertiary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'CONCLUIR',
-              style: GoogleFonts.lexend(
-                color: CustomColors.tertiary,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }
@@ -1725,165 +1724,365 @@ class _ActivityStatsSheet extends StatelessWidget {
       maxChildSize: maxHeight,
       controller: sheetController,
       builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF232530),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
+        // Usa um LayoutBuilder para saber o tamanho atual do sheet
+        return LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            // Verifica se o sheet está minimizado (altura próxima ao minChildSize)
+            final bool isMinimized =
+                constraints.maxHeight <
+                MediaQuery.of(context).size.height * (minHeight + 0.1);
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF232530),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              // Se estiver minimizado, mostra o layout de resumo.
+              // Caso contrário, mostra o layout detalhado.
+              child: isMinimized
+                  ? _buildMinimizedLayout(
+                      context,
+                      sheetController,
+                      scrollController,
+                    )
+                  : _buildExpandedLayout(
+                      context,
+                      scrollController,
+                      sheetController,
+                    ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Constrói o layout RESUMIDO para quando o painel está minimizado.
+  Widget _buildMinimizedLayout(
+    BuildContext context,
+    DraggableScrollableController sheetController,
+    ScrollController scrollController,
+  ) {
+    const double maxHeight = 0.85;
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      children: [
+        // Handle de arraste com função de clique
+        GestureDetector(
+          onTap: () => sheetController.animateTo(
+            maxHeight,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          ),
+          child: Center(
+            child: Container(
+              height: 4,
+              width: 40,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          child: SingleChildScrollView(
-            // Usa o scrollController do DraggableScrollableSheet para gerenciar o arraste
-            controller: scrollController,
+        ),
+        // Linha de estatísticas resumidas
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildStatColumn('DURAÇÃO', durationText, fontSize: 28),
+            // Distância com fonte maior
+            _buildStatColumn(
+              'DISTÂNCIA',
+              distanceInKm,
+              // Remove a unidade 'km' no modo minimizado
+              unit: '',
+              fontSize: 40,
+            ),
+            _buildStatColumn(
+              'RITMO',
+              averagePace,
+              unit: '', // Remove a unidade '/km' no modo minimizado
+              fontSize: 28,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        // Controles de ação (Câmera, Pausa, Configurações)
+        // A linha de controles agora é construída aqui para incluir os botões laterais
+        _buildActionControls(context),
+      ],
+    );
+  }
+
+  /// Constrói o layout DETALHADO para quando o painel está expandido.
+  Widget _buildExpandedLayout(
+    BuildContext context,
+    ScrollController scrollController,
+    DraggableScrollableController sheetController,
+  ) {
+    const double minHeight = 0.2;
+    const double maxHeight = 0.85;
+
+    return SingleChildScrollView(
+      controller: scrollController,
+      child: Column(
+        children: [
+          // Handle de Arraste/Minimizar
+          GestureDetector(
+            onTap: () {
+              if (sheetController.size > minHeight + 0.05) {
+                sheetController.animateTo(
+                  minHeight,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              } else {
+                sheetController.animateTo(
+                  maxHeight,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Center(
+                child: Container(
+                  height: 4,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Estatísticas Detalhadas
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
               children: [
-                // === Handle de Arraste/Minimizar ===
-                GestureDetector(
-                  onTap: () {
-                    // Implementa a função de clique: alterna entre minimizado e expandido
-                    if (sheetController.size > minHeight + 0.05) {
-                      // Se estiver perto do máximo
-                      sheetController.animateTo(
-                        minHeight,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    } else {
-                      // Se estiver perto do mínimo
-                      sheetController.animateTo(
-                        maxHeight,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Center(
-                      child: Container(
-                        height: 4,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                _buildMainStat(
+                  'DURAÇÃO',
+                  durationText,
+                  ' ',
+                  fontSize: 40,
+                  alignment: CrossAxisAlignment.center,
+                ),
+                const SizedBox(height: 24),
+                const Divider(color: Colors.white12, thickness: 1),
+                const SizedBox(height: 24),
+                _buildMainStat(
+                  'DISTÂNCIA',
+                  distanceInKm,
+                  'km',
+                  fontSize: 80,
+                  alignment: CrossAxisAlignment.center,
+                ),
+                const SizedBox(height: 24),
+                const Divider(color: Colors.white12, thickness: 1),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildMainStat(
+                        'RITMO ATUAL',
+                        currentPace,
+                        '/km',
+                        fontSize: 40,
+                        alignment: CrossAxisAlignment.start,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // === Estatísticas Detalhadas ===
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Column(
-                    children: [
-                      // Duração (Tempo) centralizada
-                      _buildMainStat(
-                        'DURAÇÃO',
-                        durationText,
-                        ' ',
+                    const SizedBox(
+                      height: 80,
+                      child: VerticalDivider(
+                        color: Colors.white12,
+                        thickness: 1,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildMainStat(
+                        'RITMO MÉDIO',
+                        averagePace,
+                        '/km',
                         fontSize: 40,
-                        alignment:
-                            CrossAxisAlignment.center, // Centraliza o texto
+                        alignment: CrossAxisAlignment.end,
                       ),
-                      const SizedBox(height: 24),
-                      const Divider(color: Colors.white12, thickness: 1),
-                      const SizedBox(height: 24),
-
-                      // Linha da Distância (Km) - AGORA MAIOR E CENTRALIZADA
-                      _buildMainStat(
-                        'DISTÂNCIA',
-                        distanceInKm,
-                        'km',
-                        fontSize: 80, // Tamanho da fonte aumentado
-                        alignment: CrossAxisAlignment.center,
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(color: Colors.white12, thickness: 1),
-                      const SizedBox(height: 24),
-
-                      // Linha de Ritmos
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _buildMainStat(
-                              'RITMO ATUAL',
-                              currentPace,
-                              '/km',
-                              fontSize: 40, // Tamanho da fonte ajustado
-                              alignment: CrossAxisAlignment.start,
-                            ),
-                          ),
-                          const SizedBox(
-                            height: 80, // Altura da linha divisória
-                            child: VerticalDivider(
-                              color: Colors.white12,
-                              thickness: 1,
-                            ),
-                          ),
-                          Expanded(
-                            child: _buildMainStat(
-                              'RITMO MÉDIO',
-                              averagePace,
-                              '/km',
-                              fontSize: 40, // Tamanho da fonte ajustado
-                              alignment: CrossAxisAlignment.end,
-                            ),
-                          ),
-                        ],
-                      ),
-                    
-
-                      // Linha de Calorias
-                      _buildCalorieStat(calories),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 40),
-
-                // === Controles (Pause/Stop/Retomar) ===
-                activityState == ActivityState.running
-                    ? _RunningControls(onPressed: onPause)
-                    : _PausedControls(onResume: onPause, onStop: onStop),
-
-                const SizedBox(height: 20),
-
-                // Botões de Música e Esporte (na tela minimizada - Pausado)
-                if (activityState == ActivityState.paused)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildSmallActionButton(
-                        Icons.music_note_outlined,
-                        CustomColors.tertiary,
-                        onTap: onMusic,
-                        // Destaca se o player estiver visível
-                        isHighlighted: isPlayerVisible,
-                      ),
-                      const SizedBox(width: 15),
-                      // Botão pequeno, sem texto
-                      SportSelectionButton(
-                        iconPath: getSportIconPath(selectedSport),
-                        label: getSportLabel(selectedSport),
-                        option: selectedSport,
-                        selectedSport: selectedSport,
-                        onTap: onSportSelect,
-                        fallbackIcon: getSportCheckIcon(selectedSport),
-                        isLarge: false, // Define o tamanho pequeno
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 40),
+                _buildCalorieStat(calories),
               ],
             ),
           ),
+          const SizedBox(height: 40),
+
+          // Controles (Pause/Stop/Retomar)
+          activityState == ActivityState.running
+              ? _RunningControls(onPressed: onPause)
+              : _PausedControls(onResume: onPause, onStop: onStop),
+          const SizedBox(height: 20),
+
+          // Botões de Música e Esporte (no estado Pausado)
+          if (activityState == ActivityState.paused)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildSmallActionButton(
+                  Icons.music_note_outlined,
+                  CustomColors.tertiary,
+                  onTap: onMusic,
+                  isHighlighted: isPlayerVisible,
+                ),
+                const SizedBox(width: 15),
+                SportSelectionButton(
+                  iconPath: getSportIconPath(selectedSport),
+                  label: getSportLabel(selectedSport),
+                  option: selectedSport,
+                  selectedSport: selectedSport,
+                  onTap: onSportSelect,
+                  fallbackIcon: getSportCheckIcon(selectedSport),
+                  isLarge: false,
+                ),
+              ],
+            ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  /// Constrói a linha de controles de ação (Câmera, Ação Principal, Configurações).
+  Widget _buildActionControls(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Botão Câmera
+          _buildSmallActionButton(
+            Icons.camera_alt_outlined,
+            CustomColors.tertiary,
+            onTap: () {
+              /* Lógica da câmera */
+            },
+          ),
+          // Ação Principal (Pausar ou Retomar/Concluir)
+          if (activityState == ActivityState.running)
+            _RunningControls(onPressed: onPause)
+          else
+            _PausedControls(onResume: onPause, onStop: onStop),
+          // Botão Configurações
+          _buildSmallActionButton(
+            Icons.settings_outlined,
+            CustomColors.tertiary,
+            onTap: () => _showSettingsModal(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Constrói os controles inferiores para o estado "Running".
+  Widget _buildRunningControls(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Botão Câmera
+          _buildSmallActionButton(
+            Icons.camera_alt_outlined,
+            CustomColors.tertiary,
+            onTap: () {
+              // Lógica para a câmera a ser implementada
+            },
+          ),
+          // Botão Pausar
+          _RunningControls(onPressed: onPause),
+          // Botão Configurações
+          _buildSmallActionButton(
+            Icons.settings_outlined,
+            CustomColors.tertiary,
+            onTap: () => _showSettingsModal(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mostra o modal de configurações da atividade.
+  void _showSettingsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF232530),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildSettingsOption(
+                context,
+                'Mostrar calorias',
+                true,
+                (value) {},
+              ),
+              _buildSettingsOption(context, 'Modo padrão', true, (value) {}),
+              _buildSettingsOption(context, 'Modo satélite', false, (value) {}),
+              _buildSettingsOption(context, 'Modo híbrido', false, (value) {}),
+              _buildSettingsOption(context, 'Modo noturno', false, (value) {}),
+              _buildSettingsOption(
+                context,
+                'Dados por áudio',
+                false,
+                (value) {},
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  /// Constrói uma opção com checkbox para o modal de configurações.
+  Widget _buildSettingsOption(
+    BuildContext context,
+    String title,
+    bool value,
+    Function(bool) onChanged,
+  ) {
+    return CheckboxListTile(
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      value: value,
+      onChanged: (newValue) => onChanged(newValue ?? false),
+      activeColor: CustomColors.primary,
+      checkColor: CustomColors.tertiary,
+      controlAffinity: ListTileControlAffinity.leading,
     );
   }
 
@@ -1936,6 +2135,49 @@ class _ActivityStatsSheet extends StatelessWidget {
     );
   }
 
+  /// Constrói uma coluna de estatística para o layout minimizado.
+  Widget _buildStatColumn(
+    String label,
+    String value, {
+    String unit = '',
+    required double fontSize,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.lexend(
+            color: Colors.white.withOpacity(0.5),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        RichText(
+          text: TextSpan(
+            style: GoogleFonts.lexend(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+            children: [
+              TextSpan(text: value),
+              if (unit.isNotEmpty)
+                TextSpan(
+                  text: ' $unit',
+                  style: GoogleFonts.lexend(
+                    color: CustomColors.primary,
+                    fontSize: 14,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Constrói o layout de estatística de calorias
   Widget _buildCalorieStat(String value) {
     return Padding(
@@ -1979,40 +2221,6 @@ class _ActivityStatsSheet extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Constrói um botão de ação circular pequeno (usado no estado Pausado)
-  Widget _buildSmallActionButton(
-    IconData icon,
-    Color color, {
-    VoidCallback? onTap,
-    bool isHighlighted = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isHighlighted ? CustomColors.primary : CustomColors.secondary,
-          boxShadow: [
-            BoxShadow(
-              color: isHighlighted
-                  ? CustomColors.primary.withAlpha(100)
-                  : Colors.black.withAlpha(50),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          color: isHighlighted ? CustomColors.tertiary : color,
-          size: 30,
-        ),
       ),
     );
   }
