@@ -12,7 +12,8 @@ import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/activity/screens/activity_detail_screen.dart';
-import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart';
+import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart'; // Assuming this is correct
+import 'package:hibrido/features/map/screens/sport_selection_button.dart'; // Corrected import path
 import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 
@@ -86,8 +87,9 @@ class _MapScreenState extends State<MapScreen> {
   // Flag que indica se o app está conectado ao Spotify.
   bool _isSpotifyConnected = false;
   // Imagem do álbum da música atual.
-  ImageProvider _trackImage =
-      const AssetImage('assets/images/spotify_placeholder.png');
+  ImageProvider _trackImage = const AssetImage(
+    'assets/images/spotify_placeholder.png',
+  );
   // Duração total e posição atual da música para a barra de progresso.
   int _trackDuration = 0;
   int _trackPosition = 0;
@@ -141,22 +143,23 @@ class _MapScreenState extends State<MapScreen> {
     final Canvas canvas = Canvas(pictureRecorder);
     const double size = 100.0; // Tamanho total do ícone, incluindo sombra
     const double center = size / 2;
-    
+
     // Raio do círculo azul
     const double blueRadius = size / 3 - 4;
-    
+
     // =========================================================================
     // 1. Desenha o "farol" (cone) de direção - Translúcido e Grande
     // O cone aponta para cima (direção 0), e será rotacionado pelo Marker.
     // =========================================================================
-    final Paint farolHaloPaint = Paint()..color = Colors.white.withOpacity(0.2); // Halo branco translúcido
+    final Paint farolHaloPaint = Paint()
+      ..color = Colors.white.withOpacity(0.2); // Halo branco translúcido
     final farolPath = Path()
       ..moveTo(center, center) // Começa no centro do círculo
       ..lineTo(center - 30, center - 120) // Ponto lateral esquerdo (mais longe)
       ..lineTo(center + 30, center - 120) // Ponto lateral direito (mais longe)
       ..close();
     canvas.drawPath(farolPath, farolHaloPaint);
-    
+
     // =========================================================================
     // 2. Desenha o círculo azul, borda e sombra (por cima do farol)
     // =========================================================================
@@ -165,11 +168,7 @@ class _MapScreenState extends State<MapScreen> {
     final Paint shadowPaint = Paint()
       ..color = Colors.black.withOpacity(0.2)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawCircle(
-      const Offset(center, center),
-      size / 2 - 5,
-      shadowPaint,
-    );
+    canvas.drawCircle(const Offset(center, center), size / 2 - 5, shadowPaint);
 
     // Desenha a borda branca (círculo maior)
     final Paint whitePaint = Paint()..color = Colors.white;
@@ -177,11 +176,7 @@ class _MapScreenState extends State<MapScreen> {
 
     // Desenha o círculo azul interno
     final Paint bluePaint = Paint()..color = Colors.blue.shade700;
-    canvas.drawCircle(
-      const Offset(center, center),
-      blueRadius,
-      bluePaint,
-    );
+    canvas.drawCircle(const Offset(center, center), blueRadius, bluePaint);
 
     final img = await pictureRecorder.endRecording().toImage(
       size.toInt(),
@@ -411,7 +406,7 @@ class _MapScreenState extends State<MapScreen> {
     _stopwatch.stop();
     _timer?.cancel();
     _positionStreamSubscription?.cancel();
-    
+
     // 2. Cria um objeto ActivityData TEMPORÁRIO com os dados finais.
     final tempActivityData = ActivityData(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -526,7 +521,8 @@ class _MapScreenState extends State<MapScreen> {
             icon: _locationMarkerIcon ?? BitmapDescriptor.defaultMarker,
             anchor: const Offset(0.5, 0.5),
             flat: true,
-            rotation: position.heading, // Atualiza a direção do marcador (farol)
+            rotation:
+                position.heading, // Atualiza a direção do marcador (farol)
           );
 
           // Remove o marcador antigo e adiciona o novo.
@@ -545,21 +541,23 @@ class _MapScreenState extends State<MapScreen> {
                 position.latitude,
                 position.longitude,
               );
-              
+
               // Atualiza a distância e as calorias.
               _totalDistanceInMeters += distance;
               // NOTA: A lógica de cálculo de calorias deve considerar o esporte
               // e o peso do usuário para ser mais precisa.
               _caloriesBurned = _totalDistanceInMeters / 16;
-              
+
               // Cálculo e atualização do Ritmo
               final totalDistanceInKm = _totalDistanceInMeters / 1000;
               final totalTimeInSeconds = _stopwatch.elapsed.inSeconds;
 
               // Ritmo Médio (Pace Average)
-              if (totalDistanceInKm > 0.05) { // Evita divisão por zero ou ritmo infinito no início
-                final averagePaceSecondsPerKm = totalTimeInSeconds / totalDistanceInKm;
-                
+              if (totalDistanceInKm > 0.05) {
+                // Evita divisão por zero ou ritmo infinito no início
+                final averagePaceSecondsPerKm =
+                    totalTimeInSeconds / totalDistanceInKm;
+
                 final avgPaceMinutes = (averagePaceSecondsPerKm / 60).floor();
                 final avgPaceSeconds = (averagePaceSecondsPerKm % 60).round();
                 _averagePaceText =
@@ -570,19 +568,20 @@ class _MapScreenState extends State<MapScreen> {
 
               // Ritmo Atual (Pace Current)
               final currentVelocityMps = position.speed; // Velocidade em m/s
-              if (currentVelocityMps > 0.5) { // Se estiver se movendo
-                  final paceSecondsPerMeter = 1 / currentVelocityMps;
-                  final paceSecondsPerKm = paceSecondsPerMeter * 1000;
-                  
-                  final curPaceMinutes = (paceSecondsPerKm / 60).floor();
-                  final curPaceSeconds = (paceSecondsPerKm % 60).round();
-                  _currentPaceText =
-                      '${curPaceMinutes.toString().padLeft(2, '0')}:${curPaceSeconds.toString().padLeft(2, '0')}';
+              if (currentVelocityMps > 0.5) {
+                // Se estiver se movendo
+                final paceSecondsPerMeter = 1 / currentVelocityMps;
+                final paceSecondsPerKm = paceSecondsPerMeter * 1000;
+
+                final curPaceMinutes = (paceSecondsPerKm / 60).floor();
+                final curPaceSeconds = (paceSecondsPerKm % 60).round();
+                _currentPaceText =
+                    '${curPaceMinutes.toString().padLeft(2, '0')}:${curPaceSeconds.toString().padLeft(2, '0')}';
               } else {
-                  _currentPaceText = '00:00'; // Parado ou muito lento
+                _currentPaceText = '00:00'; // Parado ou muito lento
               }
             }
-            
+
             _routePoints.add(LatLng(position.latitude, position.longitude));
 
             // Adiciona a nova polilinha (ou atualiza a existente) ao mapa.
@@ -837,7 +836,7 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
             ),
-          
+
           // NOVO: Widget de Estatísticas Detalhadas Redimensionável (Running/Paused)
           if (_activityState == ActivityState.running ||
               _activityState == ActivityState.paused)
@@ -853,8 +852,12 @@ class _MapScreenState extends State<MapScreen> {
               onPause: _onMainActionButtonPressed,
               onStop: _onStopButtonPressed,
               isPlayerVisible: _isPlayerVisible,
+              selectedSport: _selectedSport,
+              getSportLabel: _getSportLabel,
+              getSportIconPath: _getSportIconPath,
+              getSportCheckIcon: _getSportCheckIcon,
             ),
-            
+
           // Botão de status do GPS, visível apenas antes de iniciar ou após finalizar.
           if (_activityState == ActivityState.notStarted ||
               _activityState == ActivityState.finished)
@@ -865,14 +868,15 @@ class _MapScreenState extends State<MapScreen> {
               child: Center(child: _buildGpsButton()),
             ),
           // Controles inferiores (Iniciar/Música/Esporte) - APENAS no estado NotStarted
-          if (_activityState == ActivityState.notStarted || _activityState == ActivityState.finished)
-          Positioned(
-            bottom: 80,
-            left: 0,
-            right: 0,
-            child: _buildBottomControls(),
-          ),
-          
+          if (_activityState == ActivityState.notStarted ||
+              _activityState == ActivityState.finished)
+            Positioned(
+              bottom: 80,
+              left: 0,
+              right: 0,
+              child: _buildBottomControls(),
+            ),
+
           // Player do Spotify, visível quando ativado.
           if (_isPlayerVisible) _buildSpotifyPlayer(),
           // Seletor de tipo de mapa, visível quando ativado.
@@ -1135,93 +1139,18 @@ class _MapScreenState extends State<MapScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildMainSportItem(
-          iconPath: 'assets/images/icons/corrida.svg',
-          label: 'Corrida',
-          option: SportOption.corrida,
-        ),
-        _buildMainSportItem(
-          iconPath: 'assets/images/icons/bicicleta.svg',
-          label: 'Pedalada',
-          option: SportOption.pedalada,
-        ),
-        _buildMainSportItem(
-          iconPath: 'assets/images/icons/caminhada.svg',
-          label: 'Caminhada',
-          option: SportOption.caminhada,
-        ),
+        // Itera sobre todas as opções de esporte e cria um botão para cada uma
+        for (var sport in SportOption.values)
+          SportSelectionButton(
+            iconPath: _getSportIconPath(sport),
+            label: _getSportLabel(sport),
+            option: sport,
+            selectedSport: _selectedSport,
+            onTap: () => _updateSport(sport),
+            fallbackIcon: _getSportCheckIcon(sport),
+            isLarge: true, // Define o tamanho grande com texto
+          ),
       ],
-    );
-  }
-
-  /// Constrói um item de esporte principal (círculo grande com ícone e texto).
-  Widget _buildMainSportItem({
-    required String iconPath,
-    required String label,
-    required SportOption option,
-  }) {
-    final isSelected = _selectedSport == option;
-
-    return GestureDetector(
-      onTap: () => _updateSport(option),
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected
-                      ? CustomColors.primary.withAlpha((255 * 0.4).round())
-                      : CustomColors.secondary,
-                ),
-                child: Center(
-                  child: SvgPicture.asset(
-                    iconPath,
-                    colorFilter: ColorFilter.mode(
-                      isSelected ? CustomColors.primary : CustomColors.textDark,
-                      BlendMode.srcIn,
-                    ),
-                    width: 35,
-                    height: 35,
-                    // Placeholder para simular ícones
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        _getSportCheckIcon(option),
-                        color: isSelected
-                            ? CustomColors.secondary
-                            : CustomColors.textDark,
-                        size: 35,
-                      );
-                    },
-                  ),
-                ),
-              ),
-              if (isSelected)
-                const Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Icon(
-                    Icons.check_circle,
-                    color: CustomColors.primary,
-                    size: 20,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: GoogleFonts.lexend(
-              color: isSelected ? CustomColors.primary : Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1271,40 +1200,44 @@ class _MapScreenState extends State<MapScreen> {
                       children: [
                         // Linha com imagem, nome da música e artista
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image(
-                                image: _trackImage,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _trackName,
-                                    style: GoogleFonts.lexend(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image(
+                                    image: _trackImage,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
                                   ),
-                                  Text(
-                                    _artistName,
-                                    style: GoogleFonts.lexend(
-                                      color: Colors.white70,
-                                      fontSize: 14,
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _trackName,
+                                      style: GoogleFonts.lexend(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
+                                    Text(
+                                      _artistName,
+                                      style: GoogleFonts.lexend(
+                                        color: Colors.white70,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1324,8 +1257,11 @@ class _MapScreenState extends State<MapScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.skip_previous,
-                                  color: Colors.white, size: 40),
+                              icon: const Icon(
+                                Icons.skip_previous,
+                                color: Colors.white,
+                                size: 40,
+                              ),
                               onPressed: _playPreviousTrack,
                             ),
                             IconButton(
@@ -1339,8 +1275,11 @@ class _MapScreenState extends State<MapScreen> {
                               onPressed: _handlePlayPause,
                             ),
                             IconButton(
-                              icon: const Icon(Icons.skip_next,
-                                  color: Colors.white, size: 40),
+                              icon: const Icon(
+                                Icons.skip_next,
+                                color: Colors.white,
+                                size: 40,
+                              ),
                               onPressed: _playNextTrack,
                             ),
                           ],
@@ -1368,18 +1307,14 @@ class _MapScreenState extends State<MapScreen> {
         IconButton(
           icon: const Icon(
             Icons.keyboard_arrow_down,
-            color: CustomColors.tertiary,
+            color: CustomColors.primary,
             size: 28,
           ),
           onPressed: () => setState(() => _isPlayerVisible = false),
         ),
         // Botão para FECHAR (esconde o player e para a música)
         IconButton(
-          icon: const Icon(
-            Icons.close,
-            color: CustomColors.tertiary,
-            size: 24,
-          ),
+          icon: const Icon(Icons.close, color: CustomColors.primary, size: 24),
           onPressed: () {
             _spotifyService.pause();
             setState(() => _isPlayerVisible = false);
@@ -1395,7 +1330,7 @@ class _MapScreenState extends State<MapScreen> {
       case ActivityState.running:
       case ActivityState.paused:
         // Controles Running/Paused agora estão dentro do _ActivityStatsSheet
-        return const SizedBox.shrink(); 
+        return const SizedBox.shrink();
       case ActivityState.notStarted:
       case ActivityState.finished:
         return _NotStartedControls(
@@ -1441,7 +1376,7 @@ class _MapScreenState extends State<MapScreen> {
         width: 120,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: CustomColors.tertiary, // Fundo preto
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -1456,14 +1391,14 @@ class _MapScreenState extends State<MapScreen> {
           children: [
             Icon(
               Icons.location_on,
-              color: _isGpsOn ? CustomColors.primary : CustomColors.textDark,
+              color: _isGpsOn ? CustomColors.primary : Colors.red,
               size: 20,
             ),
             const SizedBox(width: 5),
             Text(
               _isGpsOn ? 'GPS - ON' : 'GPS - OFF',
               style: GoogleFonts.lexend(
-                color: _isGpsOn ? CustomColors.primary : Colors.grey,
+                color: CustomColors.textLight, // Texto branco
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -1504,20 +1439,23 @@ class _NotStartedControls extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onMusic;
   // Propriedades para seleção de esporte
-  final VoidCallback onSportSelect;
-  final SportOption selectedSport;
-  final String Function(SportOption) getSportLabel;
-  final String Function(SportOption) getSportIconPath;
-  final IconData Function(SportOption) getSportCheckIcon;
+  final SportOption selectedSport; // O esporte atualmente selecionado
+  final String Function(SportOption)
+  getSportLabel; // Função para obter o rótulo
+  final String Function(SportOption)
+  getSportIconPath; // Função para obter o caminho do ícone
+  final IconData Function(SportOption)
+  getSportCheckIcon; // Função para obter o ícone de fallback
+  final VoidCallback onSportSelect; // Callback para quando o botão é tocado
 
   const _NotStartedControls({
     required this.onStart,
     required this.onMusic,
-    required this.onSportSelect,
     required this.selectedSport,
     required this.getSportLabel,
     required this.getSportIconPath,
     required this.getSportCheckIcon,
+    required this.onSportSelect,
   });
 
   @override
@@ -1532,12 +1470,13 @@ class _NotStartedControls extends StatelessWidget {
           onTap: onMusic,
         ),
         _buildStartButton(),
-        // Usa a função de seleção de esporte e o esporte atual
-        _buildIconWithLabel(
-          icon: getSportIconPath(selectedSport),
+        SportSelectionButton(
+          iconPath: getSportIconPath(selectedSport),
           label: getSportLabel(selectedSport),
-          iconSize: 35,
-          onTap: onSportSelect, // Chama o seletor de esporte
+          option: selectedSport,
+          selectedSport: selectedSport,
+          onTap: onSportSelect,
+          fallbackIcon: getSportCheckIcon(selectedSport),
         ),
       ],
     );
@@ -1594,75 +1533,6 @@ class _NotStartedControls extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Constrói o ícone com rótulo para selecionar o tipo de atividade (ex: Corrida).
-  Widget _buildIconWithLabel({
-    required String icon,
-    required String label,
-    required double iconSize,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              // O botão lateral agora usa a cor primária (CustomColors.primary)
-              // com opacidade, assim como o ícone central, se estiver ativo.
-              color: CustomColors.primary.withAlpha((255 * 0.6).round()),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((255 * 0.1).round()),
-                  blurRadius: 5,
-                ),
-              ],
-            ),
-            child: Center(
-              child: SvgPicture.asset(
-                icon,
-                colorFilter: const ColorFilter.mode(
-                  CustomColors.textDark, // Cor do ícone pequeno
-                  BlendMode.srcIn,
-                ),
-                width: iconSize,
-                // Placeholder para simular ícones
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    // Fallback para ícone de corrida, mas usa o ícone check do esporte.
-                    getSportCheckIcon(selectedSport),
-                    color: CustomColors.textDark,
-                    size: iconSize,
-                  );
-                },
-              ),
-            ),
-          ),
-          // Checkmark de seleção (baseado na imagem)
-          Positioned(
-            top: -5,
-            right: -5,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: CustomColors.tertiary,
-              ),
-              child: Icon(
-                Icons.check, // Altera para sempre usar o ícone de check
-                color: CustomColors.primary,
-                size: 16,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1813,6 +1683,10 @@ class _ActivityStatsSheet extends StatelessWidget {
   final VoidCallback onMusic;
   final VoidCallback onSportSelect;
   final bool isPlayerVisible;
+  final SportOption selectedSport; // Passa o SportOption completo
+  final String Function(SportOption) getSportLabel; // Funções para obter dados
+  final String Function(SportOption) getSportIconPath;
+  final IconData Function(SportOption) getSportCheckIcon;
 
   const _ActivityStatsSheet({
     required this.durationText,
@@ -1823,20 +1697,25 @@ class _ActivityStatsSheet extends StatelessWidget {
     required this.activityState,
     required this.onPause,
     required this.onStop,
-    required this.onMusic,
     required this.onSportSelect,
     required this.isPlayerVisible,
+    required this.selectedSport,
+    required this.getSportLabel,
+    required this.getSportIconPath,
+    required this.getSportCheckIcon,
+    required this.onMusic, // Mantém onMusic
   });
 
   @override
   Widget build(BuildContext context) {
     // Controlador para acessar o estado do sheet.
-    final DraggableScrollableController sheetController = DraggableScrollableController();
+    final DraggableScrollableController sheetController =
+        DraggableScrollableController();
 
     // Define a altura mínima (minimizado) e máxima (tela cheia)
     // 0.85 para tela cheia (como na primeira imagem)
     // 0.2 para minimizado (como na segunda imagem)
-    const double minHeight = 0.2; 
+    const double minHeight = 0.2;
     const double maxHeight = 0.85;
 
     // O DraggableScrollableSheet gerencia o redimensionamento por arraste.
@@ -1863,13 +1742,15 @@ class _ActivityStatsSheet extends StatelessWidget {
                 GestureDetector(
                   onTap: () {
                     // Implementa a função de clique: alterna entre minimizado e expandido
-                    if (sheetController.size > minHeight + 0.05) { // Se estiver perto do máximo
+                    if (sheetController.size > minHeight + 0.05) {
+                      // Se estiver perto do máximo
                       sheetController.animateTo(
                         minHeight,
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
-                    } else { // Se estiver perto do mínimo
+                    } else {
+                      // Se estiver perto do mínimo
                       sheetController.animateTo(
                         maxHeight,
                         duration: const Duration(milliseconds: 300),
@@ -1892,126 +1773,111 @@ class _ActivityStatsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // === Estatísticas Detalhadas ===
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: Column(
                     children: [
-                      // Linha da Duração (Tempo) com o ícone de Minimizar
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildMainStat(
-                            'DURAÇÃO',
-                            durationText,
-                            ' ',
-                            large: true,
-                            alignment: CrossAxisAlignment.start,
-                          ),
-                          // Ícone de Minimizar/Maximizar
-                          GestureDetector(
-                            onTap: () {
-                                // Alterna o tamanho do sheet ao clicar
-                                if (sheetController.size > minHeight + 0.05) {
-                                    sheetController.animateTo(
-                                      minHeight,
-                                      duration: const Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                } else {
-                                    sheetController.animateTo(
-                                      maxHeight,
-                                      duration: const Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.1),
-                              ),
-                              child: const Icon(
-                                Icons.keyboard_arrow_down,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                          ),
-                        ],
+                      // Duração (Tempo) centralizada
+                      _buildMainStat(
+                        'DURAÇÃO',
+                        durationText,
+                        ' ',
+                        fontSize: 40,
+                        alignment:
+                            CrossAxisAlignment.center, // Centraliza o texto
                       ),
-                      const SizedBox(height: 32),
-                      
-                      // Linha da Distância (Km)
+                      const SizedBox(height: 24),
+                      const Divider(color: Colors.white12, thickness: 1),
+                      const SizedBox(height: 24),
+
+                      // Linha da Distância (Km) - AGORA MAIOR E CENTRALIZADA
                       _buildMainStat(
                         'DISTÂNCIA',
                         distanceInKm,
                         'km',
-                        large: true,
-                        alignment: CrossAxisAlignment.start,
+                        fontSize: 80, // Tamanho da fonte aumentado
+                        alignment: CrossAxisAlignment.center,
                       ),
-                      const SizedBox(height: 40),
-                      
+                      const SizedBox(height: 24),
+                      const Divider(color: Colors.white12, thickness: 1),
+                      const SizedBox(height: 24),
+
                       // Linha de Ritmos
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildMainStat(
-                            'RITMO ATUAL',
-                            currentPace,
-                            '/km',
-                            large: false,
-                            alignment: CrossAxisAlignment.start,
+                          Expanded(
+                            child: _buildMainStat(
+                              'RITMO ATUAL',
+                              currentPace,
+                              '/km',
+                              fontSize: 40, // Tamanho da fonte ajustado
+                              alignment: CrossAxisAlignment.start,
+                            ),
                           ),
-                          _buildMainStat(
-                            'RITMO MÉDIO',
-                            averagePace,
-                            '/km',
-                            large: false,
-                            alignment: CrossAxisAlignment.end,
+                          const SizedBox(
+                            height: 80, // Altura da linha divisória
+                            child: VerticalDivider(
+                              color: Colors.white12,
+                              thickness: 1,
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildMainStat(
+                              'RITMO MÉDIO',
+                              averagePace,
+                              '/km',
+                              fontSize: 40, // Tamanho da fonte ajustado
+                              alignment: CrossAxisAlignment.end,
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 40),
-                      
+                    
+
                       // Linha de Calorias
                       _buildCalorieStat(calories),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // === Controles (Pause/Stop/Retomar) ===
                 activityState == ActivityState.running
                     ? _RunningControls(onPressed: onPause)
                     : _PausedControls(onResume: onPause, onStop: onStop),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Botões de Música e Esporte (na tela minimizada - Pausado)
                 if (activityState == ActivityState.paused)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                     _buildSmallActionButton(
-                      Icons.music_note_outlined,
-                      CustomColors.tertiary,
-                      onTap: onMusic,
-                      // Destaca se o player estiver visível
-                      isHighlighted: isPlayerVisible, 
-                    ),
-                    const SizedBox(width: 15),
-                    _buildSmallActionButton(
-                      Icons.directions_run, // Placeholder para o seletor de esporte
-                      CustomColors.tertiary,
-                      onTap: onSportSelect,
-                    ),
-                  ],
-                ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildSmallActionButton(
+                        Icons.music_note_outlined,
+                        CustomColors.tertiary,
+                        onTap: onMusic,
+                        // Destaca se o player estiver visível
+                        isHighlighted: isPlayerVisible,
+                      ),
+                      const SizedBox(width: 15),
+                      // Botão pequeno, sem texto
+                      SportSelectionButton(
+                        iconPath: getSportIconPath(selectedSport),
+                        label: getSportLabel(selectedSport),
+                        option: selectedSport,
+                        selectedSport: selectedSport,
+                        onTap: onSportSelect,
+                        fallbackIcon: getSportCheckIcon(selectedSport),
+                        isLarge: false, // Define o tamanho pequeno
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 40),
               ],
             ),
@@ -2026,7 +1892,7 @@ class _ActivityStatsSheet extends StatelessWidget {
     String label,
     String value,
     String unit, {
-    required bool large,
+    required double fontSize,
     CrossAxisAlignment alignment = CrossAxisAlignment.center,
   }) {
     return Column(
@@ -2036,7 +1902,7 @@ class _ActivityStatsSheet extends StatelessWidget {
           label,
           style: GoogleFonts.lexend(
             color: Colors.white.withOpacity(0.5),
-            fontSize: large ? 16 : 14,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.0,
           ),
@@ -2045,7 +1911,7 @@ class _ActivityStatsSheet extends StatelessWidget {
         RichText(
           text: TextSpan(
             style: GoogleFonts.lexend(
-              fontSize: large ? 60 : 40,
+              fontSize: fontSize,
               fontWeight: FontWeight.w800,
               height: 1.0,
             ),
@@ -2058,7 +1924,7 @@ class _ActivityStatsSheet extends StatelessWidget {
                 text: ' $unit',
                 style: GoogleFonts.lexend(
                   color: CustomColors.primary,
-                  fontSize: large ? 24 : 18,
+                  fontSize: fontSize * 0.4, // Unidade proporcional ao valor
                   fontWeight: FontWeight.w600,
                   height: 1.5,
                 ),
@@ -2118,7 +1984,12 @@ class _ActivityStatsSheet extends StatelessWidget {
   }
 
   /// Constrói um botão de ação circular pequeno (usado no estado Pausado)
-  Widget _buildSmallActionButton(IconData icon, Color color, {VoidCallback? onTap, bool isHighlighted = false}) {
+  Widget _buildSmallActionButton(
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+    bool isHighlighted = false,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -2129,13 +2000,19 @@ class _ActivityStatsSheet extends StatelessWidget {
           color: isHighlighted ? CustomColors.primary : CustomColors.secondary,
           boxShadow: [
             BoxShadow(
-              color: isHighlighted ? CustomColors.primary.withAlpha(100) : Colors.black.withAlpha(50),
+              color: isHighlighted
+                  ? CustomColors.primary.withAlpha(100)
+                  : Colors.black.withAlpha(50),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
           ],
         ),
-        child: Icon(icon, color: isHighlighted ? CustomColors.tertiary : color, size: 30),
+        child: Icon(
+          icon,
+          color: isHighlighted ? CustomColors.tertiary : color,
+          size: 30,
+        ),
       ),
     );
   }

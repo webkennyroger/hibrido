@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
@@ -181,77 +182,86 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Constrói o widget do miniplayer de música.
   Widget _buildMinimizedPlayer() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: CustomColors.quaternary,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image(
-              image: _trackImage,
-              width: 48,
-              height: 48,
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _trackName,
-                  style: GoogleFonts.lexend(
-                    fontWeight: FontWeight.bold,
-                    color: CustomColors.textDark,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  _artistName,
-                  style: GoogleFonts.lexend(color: Colors.grey.shade600),
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF2E2F3A).withOpacity(0.8),
+                const Color(0xFF232530).withOpacity(0.8),
               ],
             ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white24, width: 1.5),
           ),
-          IconButton(
-            icon: Icon(
-              _isMusicPlaying ? Icons.pause : Icons.play_arrow,
-              color: CustomColors.textDark,
-              size: 32,
-            ),
-            onPressed: () {
-              if (_isMusicPlaying) {
-                _spotifyService.pause();
-              } else {
-                _spotifyService.resume();
-              }
-            },
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image(
+                  image: _trackImage,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _trackName,
+                      style: GoogleFonts.lexend(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      _artistName,
+                      style: GoogleFonts.lexend(color: Colors.white70),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  _isMusicPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                  color: Colors.white,
+                  size: 40,
+                ),
+                onPressed: () {
+                  if (_isMusicPlaying) {
+                    _spotifyService.pause();
+                  } else {
+                    _spotifyService.resume();
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.skip_next,
+                  color: Colors.white,
+                  size: 40,
+                ),
+                onPressed: () {
+                  _spotifyService.skipNext();
+                },
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.skip_next,
-              color: CustomColors.textDark,
-              size: 32,
-            ),
-            onPressed: () {
-              _spotifyService.skipNext();
-            },
-          ),
-        ],
+        ),
       ),
     );
   }

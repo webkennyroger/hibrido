@@ -53,7 +53,6 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // Usaremos um Scaffold para ter uma tela completa com fundo translúcido
     return Scaffold(
       // Fundo escuro
       backgroundColor: CustomColors.quaternary.withOpacity(0.95),
