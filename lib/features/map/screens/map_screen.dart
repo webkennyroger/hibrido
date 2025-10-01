@@ -1978,30 +1978,6 @@ class _ActivityStatsSheet extends StatelessWidget {
                   ),
                 ),
           const SizedBox(height: 20),
-
-          // Botões de Música e Esporte (no estado Pausado)
-          if (activityState == ActivityState.paused)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildSmallActionButton(
-                  Icons.music_note_outlined,
-                  CustomColors.tertiary,
-                  onTap: onMusic,
-                  isHighlighted: isPlayerVisible,
-                ),
-                const SizedBox(width: 15),
-                SportSelectionButton(
-                  iconPath: getSportIconPath(selectedSport),
-                  label: getSportLabel(selectedSport),
-                  option: selectedSport,
-                  selectedSport: selectedSport,
-                  onTap: onSportSelect,
-                  fallbackIcon: getSportCheckIcon(selectedSport),
-                  isLarge: false,
-                ),
-              ],
-            ),
           const SizedBox(height: 40),
         ],
       ),
