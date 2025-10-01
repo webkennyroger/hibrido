@@ -130,7 +130,9 @@ class _ActivityScreenState extends State<ActivityScreen>
                       style: GoogleFonts.lexend(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: CustomColors.textDark.withOpacity(0.5),
+                        color: CustomColors.textDark.withAlpha(
+                          (255 * 0.5).round(),
+                        ),
                       ),
                     ),
                   ),
@@ -182,7 +184,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha((255 * 0.1).round()),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -215,9 +217,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                 ),
                 Text(
                   _artistName,
-                  style: GoogleFonts.lexend(
-                    color: Colors.grey.shade600,
-                  ),
+                  style: GoogleFonts.lexend(color: Colors.grey.shade600),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -238,7 +238,11 @@ class _ActivityScreenState extends State<ActivityScreen>
             },
           ),
           IconButton(
-            icon: const Icon(Icons.skip_next, color: CustomColors.textDark, size: 32),
+            icon: const Icon(
+              Icons.skip_next,
+              color: CustomColors.textDark,
+              size: 32,
+            ),
             onPressed: () {
               _spotifyService.skipNext();
             },

@@ -193,8 +193,8 @@ class _HomeScreenState extends State<HomeScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF2E2F3A).withOpacity(0.8),
-                const Color(0xFF232530).withOpacity(0.8),
+                CustomColors.textDark.withAlpha((255 * 0.2).round()),
+                CustomColors.primary.withAlpha((255 * 0.5).round()),
               ],
             ),
             borderRadius: BorderRadius.circular(24),

@@ -55,7 +55,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   Widget build(BuildContext context) {
     return Scaffold(
       // Fundo escuro
-      backgroundColor: CustomColors.quaternary.withOpacity(0.95),
+      backgroundColor: CustomColors.quaternary.withAlpha((255 * 0.95).round()),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -244,7 +244,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
         Text(
           label,
           style: GoogleFonts.lexend(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withAlpha((255 * 0.7).round()),
             fontSize: 16,
           ),
         ),

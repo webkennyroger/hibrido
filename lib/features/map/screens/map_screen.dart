@@ -5,13 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_picker/image_picker.dart';
 // Certifique-se de que o caminho para o seu arquivo de cores está correto
 import 'package:hibrido/core/theme/custom_colors.dart';
 // Certifique-se de que os caminhos para os arquivos de dados e tela estão corretos
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
-import 'package:hibrido/features/activity/screens/activity_detail_screen.dart';
 import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart'; // Assuming this is correct
 import 'package:hibrido/features/map/screens/sport_selection_button.dart'; // Corrected import path
 import 'package:hibrido/services/spotify_service.dart';
@@ -224,7 +223,9 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      await Geolocator.openAppSettings();
+      if (mounted) {
+        await Geolocator.openAppSettings();
+      }
       return;
     }
 
@@ -424,37 +425,39 @@ class _MapScreenState extends State<MapScreen> {
     );
 
     // 3. Navega para a tela de confirmação (FinishedConfirmationSheet)
-    final result = await Navigator.push(
+    if (!mounted) return;
+    final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (context) => FinishedConfirmationSheet(
+        builder: (sheetContext) => FinishedConfirmationSheet(
           activityData: tempActivityData,
-          // Ação: Salvar, aplicar o novo título e Navegar
           onSaveAndNavigate: (newTitle) async {
-            // 3a. Cria a ActivityData FINAL com o título atualizado.
             final finalActivityData = tempActivityData.copyWith(
               activityTitle: newTitle,
             );
 
-            // 3b. Salva a atividade
             await _saveActivity(finalActivityData);
 
-            // 3c. Fecha a tela de confirmação e a tela do mapa, retornando 'true' para indicar sucesso.
-            Navigator.of(context).pop(true); // Pop FinishedConfirmationSheet
+            // Usa o contexto do sheet para fechar a si mesmo
+            if (sheetContext.mounted) {
+              Navigator.of(sheetContext).pop(true);
+            }
           },
-          // Ação: Descartar a Atividade
           onDiscard: () {
-            Navigator.of(context).pop(); // Fecha a tela de confirmação
-            _resetActivityState(); // Reseta o estado.
+            // Usa o contexto do sheet para fechar a si mesmo
+            if (sheetContext.mounted) {
+              Navigator.of(sheetContext).pop();
+            }
+            _resetActivityState();
           },
         ),
       ),
     );
 
     // 4. Se o resultado do Navigator.push for 'true' (atividade salva), fecha a MapScreen.
-    if (context.mounted && (await result as bool? ?? false)) {
-      Navigator.of(context).pop(true); // Pop MapScreen
+    if (mounted && (result as bool? ?? false)) {
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -737,6 +740,24 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  /// Abre a câmera para tirar uma foto.
+  Future<void> _openCamera() async {
+    final ImagePicker picker = ImagePicker();
+    // Captura uma imagem usando a câmera.
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+
+    if (image != null) {
+      // A imagem foi capturada com sucesso.
+      // Você pode adicionar lógica aqui para salvar o caminho da imagem
+      // ou exibi-la em algum lugar.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Foto capturada: ${image.path}')),
+        );
+      }
+    }
+  }
+
   //================================================================================
   // Método `build` e Widgets da UI
   //================================================================================
@@ -856,6 +877,7 @@ class _MapScreenState extends State<MapScreen> {
               getSportLabel: _getSportLabel,
               getSportIconPath: _getSportIconPath,
               getSportCheckIcon: _getSportCheckIcon,
+              onCamera: _openCamera,
             ),
 
           // Botão de status do GPS, visível apenas antes de iniciar ou após finalizar.
@@ -991,8 +1013,7 @@ class _MapScreenState extends State<MapScreen> {
   }) {
     return GestureDetector(
       onTap: isLocked ? null : onTap,
-      child: Container(
-        // ignore: sized_box_for_whitespace
+      child: SizedBox(
         width: 70,
         child: Column(
           children: [
@@ -1245,7 +1266,9 @@ class _MapScreenState extends State<MapScreen> {
                         // Barra de progresso da música
                         if (_trackDuration > 0)
                           LinearProgressIndicator(
-                            value: _trackPosition / _trackDuration,
+                            value: _trackDuration > 0
+                                ? _trackPosition / _trackDuration
+                                : 0.0,
                             backgroundColor: Colors.white.withOpacity(0.2),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               CustomColors.primary,
@@ -1538,71 +1561,75 @@ class _NotStartedControls extends StatelessWidget {
   }
 }
 
-/// Widget que exibe os controles enquanto a atividade está em andamento.
-class _RunningControls extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _RunningControls({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [_buildPauseButton()],
-    );
-  }
-
-  /// Constrói o botão grande de "Pausar".
-  Widget _buildPauseButton() {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 110,
-        height: 110,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: CustomColors.primary,
-          boxShadow: [
-            BoxShadow(
-              color: CustomColors.primary.withAlpha((255 * 0.4).round()),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Icon(Icons.pause, color: CustomColors.tertiary, size: 50),
-        ),
-      ),
-    );
-  }
-}
-
 /// Constrói um botão de ação para os controles de Pausa (Retomar/Concluir).
 Widget _buildActionButton(
   IconData icon,
   Color color, {
   VoidCallback? onTap,
   bool isPrimary = false,
+  Color? backgroundColor,
+  String? text,
 }) {
   return GestureDetector(
     onTap: onTap,
     child: Container(
-      width: 70, // Tamanho consistente
-      height: 70,
+      width: text != null ? null : 70, // Largura automática se tiver texto
+      height: 70, // Altura consistente
+      padding: text != null
+          ? const EdgeInsets.symmetric(
+              horizontal: 16,
+            ) // Padding horizontal reduzido
+          : null,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isPrimary ? CustomColors.primary : CustomColors.secondary,
+        shape: text != null ? BoxShape.rectangle : BoxShape.circle,
+        borderRadius: text != null ? BorderRadius.circular(35) : null,
+        color:
+            backgroundColor ??
+            (isPrimary ? CustomColors.primary : CustomColors.secondary),
         boxShadow: [
           BoxShadow(
-            color: isPrimary
-                ? CustomColors.primary.withAlpha(100)
-                : Colors.black.withAlpha(50),
+            color:
+                (backgroundColor ??
+                        (isPrimary ? CustomColors.primary : Colors.black))
+                    .withOpacity(0.4),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Icon(icon, color: color, size: 35),
+      child: text != null
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 28),
+                const SizedBox(width: 8),
+                Text(
+                  text,
+                  style: GoogleFonts.lexend(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 35),
+                if (text != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    text,
+                    style: GoogleFonts.lexend(
+                      color: color,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ],
+            ),
     ),
   );
 }
@@ -1641,27 +1668,45 @@ Widget _buildSmallActionButton(
   );
 }
 
+/// Constrói um botão de ação que é apenas um ícone clicável, sem fundo.
+Widget _buildIconOnlyButton(IconData icon, Color color, {VoidCallback? onTap}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Icon(icon, color: color, size: 30),
+  );
+}
+
 /// Widget que exibe os controles quando a atividade está pausada.
 class _PausedControls extends StatelessWidget {
   final VoidCallback onResume;
   final VoidCallback onStop;
+  final bool showText;
 
-  const _PausedControls({required this.onResume, required this.onStop});
+  const _PausedControls({
+    required this.onResume,
+    required this.onStop,
+    this.showText = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Botão Concluir (Stop) - Agora com o mesmo estilo do botão de música
-        _buildActionButton(Icons.stop, CustomColors.tertiary, onTap: onStop),
-        const SizedBox(width: 20),
-        // Botão Retomar (Play)
         _buildActionButton(
           Icons.play_arrow,
           CustomColors.tertiary,
           onTap: onResume,
-          isPrimary: true, // Destaca o botão de retomar
+          isPrimary: true,
+          text: showText ? 'RETORNAR' : null,
+        ),
+        const SizedBox(width: 15),
+        _buildActionButton(
+          Icons.stop,
+          Colors.white,
+          onTap: onStop,
+          backgroundColor: CustomColors.quinary,
+          text: showText ? 'CONCLUIR' : null,
         ),
       ],
     );
@@ -1687,6 +1732,7 @@ class _ActivityStatsSheet extends StatelessWidget {
   final String Function(SportOption) getSportIconPath;
   final IconData Function(SportOption) getSportCheckIcon;
 
+  final VoidCallback onCamera;
   const _ActivityStatsSheet({
     required this.durationText,
     required this.distanceInKm,
@@ -1703,6 +1749,7 @@ class _ActivityStatsSheet extends StatelessWidget {
     required this.getSportIconPath,
     required this.getSportCheckIcon,
     required this.onMusic, // Mantém onMusic
+    required this.onCamera,
   });
 
   @override
@@ -1714,7 +1761,7 @@ class _ActivityStatsSheet extends StatelessWidget {
     // Define a altura mínima (minimizado) e máxima (tela cheia)
     // 0.85 para tela cheia (como na primeira imagem)
     // 0.2 para minimizado (como na segunda imagem)
-    const double minHeight = 0.2;
+    const double minHeight = 0.32; // Aumentado para evitar cobrir os botões
     const double maxHeight = 0.85;
 
     // O DraggableScrollableSheet gerencia o redimensionamento por arraste.
@@ -1767,56 +1814,48 @@ class _ActivityStatsSheet extends StatelessWidget {
     ScrollController scrollController,
   ) {
     const double maxHeight = 0.85;
-    return ListView(
+    return SingleChildScrollView(
       controller: scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      children: [
-        // Handle de arraste com função de clique
-        GestureDetector(
-          onTap: () => sheetController.animateTo(
-            maxHeight,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          ),
-          child: Center(
-            child: Container(
-              height: 4,
-              width: 40,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Column(
+          children: [
+            // Handle de arraste com função de clique
+            GestureDetector(
+              onTap: () => sheetController.animateTo(
+                maxHeight,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
+                child: Icon(
+                  Icons.keyboard_arrow_up,
+                  color: CustomColors.primary.withOpacity(0.5),
+                  size: 32,
+                ),
               ),
             ),
-          ),
-        ),
-        // Linha de estatísticas resumidas
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _buildStatColumn('DURAÇÃO', durationText, fontSize: 28),
-            // Distância com fonte maior
-            _buildStatColumn(
-              'DISTÂNCIA',
-              distanceInKm,
-              // Remove a unidade 'km' no modo minimizado
-              unit: '',
-              fontSize: 40,
+            // Linha de estatísticas resumidas
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildStatColumn('DURAÇÃO', durationText, fontSize: 26),
+                _buildStatColumn(
+                  'DISTÂNCIA',
+                  distanceInKm,
+                  unit: '',
+                  fontSize: 40,
+                ),
+                _buildStatColumn('RITMO', averagePace, unit: '', fontSize: 26),
+              ],
             ),
-            _buildStatColumn(
-              'RITMO',
-              averagePace,
-              unit: '', // Remove a unidade '/km' no modo minimizado
-              fontSize: 28,
-            ),
+            const SizedBox(height: 24),
+            _buildActionControls(context),
           ],
         ),
-        const SizedBox(height: 24),
-        // Controles de ação (Câmera, Pausa, Configurações)
-        // A linha de controles agora é construída aqui para incluir os botões laterais
-        _buildActionControls(context),
-      ],
+      ),
     );
   }
 
@@ -1850,17 +1889,12 @@ class _ActivityStatsSheet extends StatelessWidget {
                 );
               }
             },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Center(
-                child: Container(
-                  height: 4,
-                  width: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10.0),
+              child: Icon(
+                Icons.keyboard_arrow_down,
+                color: CustomColors.primary.withOpacity(0.5),
+                size: 32,
               ),
             ),
           ),
@@ -1930,8 +1964,18 @@ class _ActivityStatsSheet extends StatelessWidget {
 
           // Controles (Pause/Stop/Retomar)
           activityState == ActivityState.running
-              ? _RunningControls(onPressed: onPause)
-              : _PausedControls(onResume: onPause, onStop: onStop),
+              ? _buildPauseButton()
+              // Layout expandido mostra o texto
+              : Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                  ), // Padding reduzido
+                  child: _PausedControls(
+                    onResume: onPause,
+                    onStop: onStop,
+                    showText: true,
+                  ),
+                ),
           const SizedBox(height: 20),
 
           // Botões de Música e Esporte (no estado Pausado)
@@ -1972,50 +2016,28 @@ class _ActivityStatsSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Botão Câmera
-          _buildSmallActionButton(
+          _buildIconOnlyButton(
             Icons.camera_alt_outlined,
-            CustomColors.tertiary,
-            onTap: () {
-              /* Lógica da câmera */
-            },
+            CustomColors.primary,
+            onTap: onCamera,
           ),
           // Ação Principal (Pausar ou Retomar/Concluir)
           if (activityState == ActivityState.running)
-            _RunningControls(onPressed: onPause)
+            _buildPauseButton(isSmall: true) // Usa a versão pequena do botão
           else
-            _PausedControls(onResume: onPause, onStop: onStop),
+            // Layout minimizado não mostra texto
+            SizedBox(
+              width: 155, // Largura para conter os dois botões
+              child: _PausedControls(
+                onResume: onPause,
+                onStop: onStop,
+                showText: false,
+              ),
+            ),
           // Botão Configurações
-          _buildSmallActionButton(
+          _buildIconOnlyButton(
             Icons.settings_outlined,
-            CustomColors.tertiary,
-            onTap: () => _showSettingsModal(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Constrói os controles inferiores para o estado "Running".
-  Widget _buildRunningControls(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Botão Câmera
-          _buildSmallActionButton(
-            Icons.camera_alt_outlined,
-            CustomColors.tertiary,
-            onTap: () {
-              // Lógica para a câmera a ser implementada
-            },
-          ),
-          // Botão Pausar
-          _RunningControls(onPressed: onPause),
-          // Botão Configurações
-          _buildSmallActionButton(
-            Icons.settings_outlined,
-            CustomColors.tertiary,
+            CustomColors.primary,
             onTap: () => _showSettingsModal(context),
           ),
         ],
@@ -2083,6 +2105,37 @@ class _ActivityStatsSheet extends StatelessWidget {
       activeColor: CustomColors.primary,
       checkColor: CustomColors.tertiary,
       controlAffinity: ListTileControlAffinity.leading,
+    );
+  }
+
+  /// Constrói o botão grande de "Pausar".
+  Widget _buildPauseButton({bool isSmall = false}) {
+    final double size = isSmall ? 70 : 110;
+    final double iconSize = isSmall ? 35 : 50;
+    return GestureDetector(
+      onTap: onPause,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: CustomColors.primary,
+          boxShadow: [
+            BoxShadow(
+              color: CustomColors.primary.withOpacity(0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(
+            Icons.pause,
+            color: CustomColors.tertiary,
+            size: iconSize,
+          ),
+        ),
+      ),
     );
   }
 

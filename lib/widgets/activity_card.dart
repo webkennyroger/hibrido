@@ -6,6 +6,7 @@ import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/activity/screens/comments_screen.dart';
 import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/core/utils/map_utils.dart';
 
 class ActivityCard extends StatefulWidget {
   final ActivityData activityData;
@@ -42,29 +43,6 @@ class _ActivityCardState extends State<ActivityCard> {
     _isLiked = widget.activityData.isLiked;
     _likesCount = widget.activityData.likes;
     _commentsCount = widget.activityData.commentsList.length;
-  }
-
-  // Calcula os limites do mapa para centralizar a rota.
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    if (list.isEmpty) {
-      // Retorna um limite padrão se a lista estiver vazia
-      return LatLngBounds(
-        northeast: const LatLng(0, 0),
-        southwest: const LatLng(0, 0),
-      );
-    }
-    double x0 = list.first.latitude,
-        x1 = list.first.latitude,
-        y0 = list.first.longitude,
-        y1 = list.first.longitude;
-
-    for (LatLng latLng in list) {
-      if (latLng.latitude > x1) x1 = latLng.latitude;
-      if (latLng.latitude < x0) x0 = latLng.latitude;
-      if (latLng.longitude > y1) y1 = latLng.longitude;
-      if (latLng.longitude < y0) y0 = latLng.longitude;
-    }
-    return LatLngBounds(northeast: LatLng(x1, y1), southwest: LatLng(x0, y0));
   }
 
   @override
@@ -232,7 +210,7 @@ class _ActivityCardState extends State<ActivityCard> {
           initialCameraPosition: widget.activityData.routePoints.isEmpty
               ? const CameraPosition(target: LatLng(0, 0), zoom: 14)
               : CameraPosition(
-                  target: _boundsFromLatLngList(
+                  target: LatLngBoundsUtils.fromLatLngList(
                     widget.activityData.routePoints,
                   ).center,
                   zoom: 14,
@@ -249,7 +227,9 @@ class _ActivityCardState extends State<ActivityCard> {
             if (widget.activityData.routePoints.isNotEmpty) {
               controller.animateCamera(
                 CameraUpdate.newLatLngBounds(
-                  _boundsFromLatLngList(widget.activityData.routePoints),
+                  LatLngBoundsUtils.fromLatLngList(
+                    widget.activityData.routePoints,
+                  ),
                   50.0, // padding
                 ),
               );

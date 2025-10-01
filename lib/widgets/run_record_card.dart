@@ -82,9 +82,7 @@ class RunRecordCard extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.lexend(
-            color: CustomColors.textDark.withAlpha(
-              (255 * 0.7).round(),
-            ), // This was already corrected.
+            color: CustomColors.textDark.withAlpha((255 * 0.7).round()),
             fontSize: 12,
           ),
         ),

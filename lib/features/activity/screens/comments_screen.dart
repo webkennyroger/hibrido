@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
+import 'package:hibrido/core/utils/map_utils.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 
 class CommentsScreen extends StatefulWidget {
@@ -56,28 +57,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
     FocusScope.of(context).unfocus(); // Esconde o teclado
   }
 
-  // Calcula os limites do mapa para centralizar a rota.
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    if (list.isEmpty) {
-      return LatLngBounds(
-        northeast: const LatLng(0, 0),
-        southwest: const LatLng(0, 0),
-      );
-    }
-    double x0 = list.first.latitude;
-    double x1 = list.first.latitude;
-    double y0 = list.first.longitude;
-    double y1 = list.first.longitude;
-
-    for (LatLng latLng in list) {
-      if (latLng.latitude > x1) x1 = latLng.latitude;
-      if (latLng.latitude < x0) x0 = latLng.latitude;
-      if (latLng.longitude > y1) y1 = latLng.longitude;
-      if (latLng.longitude < y0) y0 = latLng.longitude;
-    }
-    return LatLngBounds(northeast: LatLng(x1, y1), southwest: LatLng(x0, y0));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,8 +79,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
         actions: [
           TextButton(
             onPressed: _isPostButtonEnabled
-                // Ao postar, retorna a nova lista de comentários para a tela anterior
-                ? () => Navigator.of(context).pop(_comments)
+                ? () {
+                    _postComment(); // Adiciona o novo comentário
+                    Navigator.of(
+                      context,
+                    ).pop(_comments); // Retorna a lista atualizada
+                  }
                 : null,
             child: Text(
               'Postar',
@@ -188,7 +171,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                     .isNotEmpty) {
                                   _mapController?.animateCamera(
                                     CameraUpdate.newLatLngBounds(
-                                      _boundsFromLatLngList(
+                                      LatLngBoundsUtils.fromLatLngList(
                                         widget.activityData.routePoints,
                                       ),
                                       50.0,
