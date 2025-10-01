@@ -1500,6 +1500,7 @@ class _NotStartedControls extends StatelessWidget {
           selectedSport: selectedSport,
           onTap: onSportSelect,
           fallbackIcon: getSportCheckIcon(selectedSport),
+          useDarkMode: true, // Ativa o novo estilo preto
         ),
       ],
     );

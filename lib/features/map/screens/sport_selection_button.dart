@@ -14,6 +14,7 @@ class SportSelectionButton extends StatelessWidget {
   final VoidCallback onTap;
   final IconData fallbackIcon; // Ícone a ser usado se o SVG não carregar
   final bool isLarge; // NOVO: para controlar o tamanho
+  final bool useDarkMode; // NOVO: para o estilo preto
 
   const SportSelectionButton({
     super.key,
@@ -24,11 +25,22 @@ class SportSelectionButton extends StatelessWidget {
     required this.onTap,
     required this.fallbackIcon,
     this.isLarge = false, // Por padrão, é o botão pequeno
+    this.useDarkMode = false, // Por padrão, usa o estilo normal
   });
 
   @override
   Widget build(BuildContext context) {
     final bool isSelected = selectedSport == option;
+
+    // Define a cor de fundo
+    final Color backgroundColor = isSelected
+        ? (isLarge
+              ? CustomColors
+                    .primary // Verde sólido para o botão grande
+              : CustomColors.primary.withAlpha(
+                  (255 * 0.6).round(),
+                )) // Verde translúcido para o pequeno
+        : (isLarge ? CustomColors.secondary : CustomColors.tertiary);
 
     return GestureDetector(
       onTap: onTap,
@@ -42,13 +54,7 @@ class SportSelectionButton extends StatelessWidget {
                 height: isLarge ? 70 : 60,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected
-                      ? (isLarge
-                          ? CustomColors.primary // Verde sólido para o botão grande
-                          : CustomColors.primary.withAlpha((255 * 0.6).round())) // Verde translúcido para o pequeno
-                      : (isLarge
-                            ? CustomColors.secondary
-                            : CustomColors.tertiary),
+                  color: backgroundColor,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withAlpha((255 * 0.1).round()),
@@ -60,11 +66,14 @@ class SportSelectionButton extends StatelessWidget {
                   child: SvgPicture.asset(
                     iconPath,
                     colorFilter: ColorFilter.mode(
-                      isSelected
-                          ? (isLarge
-                              ? CustomColors.tertiary // Ícone preto no botão grande
-                              : CustomColors.primary) // Ícone verde no botão pequeno
-                          : CustomColors.tertiary,
+                      useDarkMode
+                          ? CustomColors
+                                .tertiary // Ícone sempre preto no modo escuro
+                          : (isSelected
+                                ? (isLarge
+                                      ? CustomColors.tertiary
+                                      : CustomColors.primary)
+                                : CustomColors.tertiary),
                       BlendMode.srcIn,
                     ),
                     width: 35,
@@ -89,9 +98,12 @@ class SportSelectionButton extends StatelessWidget {
                   right: isLarge ? 0 : -5,
                   child: Icon(
                     Icons.check_circle, // Usa sempre o ícone com círculo
-                    color: isLarge
-                        ? CustomColors.tertiary // "Check" preto no botão grande
-                        : CustomColors.primary, // "Check" verde no botão pequeno
+                    color: useDarkMode
+                        ? CustomColors
+                              .tertiary // Check preto se dark mode
+                        : (isLarge
+                              ? CustomColors.tertiary
+                              : CustomColors.primary),
                     size: 20, // Usa sempre o mesmo tamanho
                   ),
                 ),
