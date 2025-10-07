@@ -22,6 +22,8 @@ class MediaPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -32,18 +34,18 @@ class MediaPlayer extends StatelessWidget {
               IconButton(
                 onPressed: onReload,
                 icon: isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: CustomColors.tertiary,
+                          color: colors.text,
                         ),
                       )
-                    : const Icon(
+                    : Icon(
                         CupertinoIcons.refresh,
                         size: 28,
-                        color: CustomColors.tertiary,
+                        color: colors.text,
                       ),
               ),
               Expanded(
@@ -51,20 +53,17 @@ class MediaPlayer extends StatelessWidget {
                   children: [
                     Text(
                       trackName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: CustomColors.textDark,
+                        color: colors.text,
                       ),
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       artistName,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: CustomColors.textDark,
-                      ),
+                      style: TextStyle(fontSize: 12, color: colors.text),
                     ),
                   ],
                 ),
@@ -74,12 +73,12 @@ class MediaPlayer extends StatelessWidget {
                 icon: Icon(
                   CupertinoIcons.waveform,
                   size: 32,
-                  color: CustomColors.tertiary,
+                  color: colors.text,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
           /*Row( // Barra de progresso pode ser implementada no futuro
             spacing: 8,
@@ -129,7 +128,7 @@ class MediaPlayer extends StatelessWidget {
                 icon: Icon(
                   CupertinoIcons.backward_fill,
                   size: 40,
-                  color: CustomColors.tertiary,
+                  color: colors.text,
                 ),
               ),
               IconButton(
@@ -139,7 +138,7 @@ class MediaPlayer extends StatelessWidget {
                       ? CupertinoIcons.pause_fill
                       : CupertinoIcons.play_fill,
                   size: 50,
-                  color: CustomColors.tertiary,
+                  color: colors.text,
                 ),
               ),
               IconButton(
@@ -147,7 +146,7 @@ class MediaPlayer extends StatelessWidget {
                 icon: Icon(
                   CupertinoIcons.forward_fill,
                   size: 40,
-                  color: CustomColors.tertiary,
+                  color: colors.text,
                 ),
               ),
             ],

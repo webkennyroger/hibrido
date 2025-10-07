@@ -20,6 +20,7 @@ class ActivityData {
   final String? notes;
   final List<String> taggedPartnerIds;
   final int? mood;
+  final List<String> mediaPaths; // Renomeado de imagePaths
 
   ActivityData({
     required this.id,
@@ -40,6 +41,7 @@ class ActivityData {
     this.notes,
     this.taggedPartnerIds = const [],
     this.mood,
+    this.mediaPaths = const [],
   }) : commentsList = commentsList ?? [];
 
   // Método para criar uma cópia do objeto com alguns valores alterados.
@@ -53,6 +55,7 @@ class ActivityData {
     List<String>? taggedPartnerIds,
     int? likes,
     bool? isLiked,
+    List<String>? mediaPaths,
     List<String>? commentsList,
   }) {
     return ActivityData(
@@ -74,6 +77,7 @@ class ActivityData {
       notes: notes ?? this.notes,
       taggedPartnerIds: taggedPartnerIds ?? this.taggedPartnerIds,
       mood: mood ?? this.mood,
+      mediaPaths: mediaPaths ?? this.mediaPaths,
     );
   }
 
@@ -100,6 +104,7 @@ class ActivityData {
       'notes': notes,
       'taggedPartnerIds': taggedPartnerIds,
       'mood': mood,
+      'mediaPaths': mediaPaths,
     };
   }
 
@@ -126,6 +131,7 @@ class ActivityData {
       notes: json['notes'],
       taggedPartnerIds: List<String>.from(json['taggedPartnerIds'] ?? []),
       mood: json['mood'],
+      mediaPaths: List<String>.from(json['mediaPaths'] ?? []),
     );
   }
 }

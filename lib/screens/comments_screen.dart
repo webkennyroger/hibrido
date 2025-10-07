@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../core/theme/custom_colors.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
 
 class CommentsScreen extends StatefulWidget {
   final ActivityData activityData;
@@ -58,19 +58,21 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: Icon(Icons.close, color: colors.text),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Comentários',
           style: GoogleFonts.lexend(
-            color: Colors.black,
+            color: colors.text,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -87,8 +89,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
               'Postar',
               style: GoogleFonts.lexend(
                 color: _isPostButtonEnabled
-                    ? CustomColors.primary
-                    : Colors.grey.shade400,
+                    ? AppColors.primary
+                    : colors.textSecondary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -123,13 +125,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                   widget.activityData.userName,
                                   style: GoogleFonts.lexend(
                                     fontWeight: FontWeight.bold,
+                                    color: colors.text,
                                     fontSize: 16,
                                   ),
                                 ),
                                 Text(
                                   widget.activityData.runTime,
                                   style: GoogleFonts.lexend(
-                                    color: Colors.grey.shade600,
+                                    color: colors.textSecondary,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -142,6 +145,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           widget.activityData.activityTitle,
                           style: GoogleFonts.lexend(
                             fontWeight: FontWeight.bold,
+                            color: colors.text,
                             fontSize: 22,
                           ),
                         ),
@@ -149,7 +153,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         Text(
                           '${(widget.activityData.distanceInMeters / 1000).toStringAsFixed(2)} km',
                           style: GoogleFonts.lexend(
-                            color: Colors.grey.shade700,
+                            color: colors.textSecondary,
                             fontSize: 16,
                           ),
                         ),
@@ -187,7 +191,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                 Polyline(
                                   polylineId: const PolylineId('route'),
                                   points: widget.activityData.routePoints,
-                                  color: CustomColors.primary,
+                                  color: AppColors.primary,
                                   width: 4,
                                 ),
                               },
@@ -201,16 +205,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.thumb_up,
-                              color: CustomColors.primary,
+                              color: AppColors.primary,
                               size: 16,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Você e 12 outros', // Exemplo de contagem de curtidas
                               style: GoogleFonts.lexend(
-                                color: Colors.grey.shade700,
+                                color: colors.textSecondary,
                                 fontSize: 14,
                               ),
                             ),
@@ -219,14 +223,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: colors.text.withOpacity(0.1)),
                   // Lista de comentários (placeholder)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 80.0),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 80.0),
                     child: Center(
                       child: Text(
                         'Seja o primeiro a comentar!',
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: colors.textSecondary),
                       ),
                     ),
                   ),
@@ -238,8 +242,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              color: colors.surface,
+              border: Border(
+                top: BorderSide(color: colors.text.withOpacity(0.1)),
+              ),
             ),
             child: Row(
               children: [
@@ -254,8 +260,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   child: TextField(
                     controller: _commentController,
                     autofocus: true,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: colors.text),
+                    decoration: InputDecoration(
                       hintText: 'Adicione um comentário...',
+                      hintStyle: TextStyle(color: colors.textSecondary),
                       border: InputBorder.none,
                     ),
                     maxLines: null,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
@@ -6,18 +7,25 @@ import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/activity/screens/comments_screen.dart';
 import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hibrido/core/utils/map_utils.dart';
 
+// Enum para as opções de privacidade, para manter a consistência.
+enum PrivacyOption { public, followers, private }
+
 class ActivityCard extends StatefulWidget {
   final ActivityData activityData;
   final VoidCallback onDelete; // Callback para notificar a exclusão
+  final Function(ActivityData)
+  onUpdate; // Callback para notificar a atualização
 
   const ActivityCard({
     super.key,
     required this.activityData,
     required this.onDelete,
+    required this.onUpdate,
   });
 
   @override
@@ -48,40 +56,56 @@ class _ActivityCardState extends State<ActivityCard> {
   }
 
   @override
+  void didUpdateWidget(covariant ActivityCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Se os dados da atividade mudaram, atualiza o estado local do card.
+    if (widget.activityData != oldWidget.activityData) {
+      setState(() {
+        _isLiked = widget.activityData.isLiked;
+        _likesCount = widget.activityData.likes;
+        _commentsCount = widget.activityData.commentsList.length;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Card(
-      color: colors.surface,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Cabeçalho do Card
-            _buildHeader(context),
-            const SizedBox(height: 12),
-            // Título da Atividade
-            Text(
-              widget.activityData.activityTitle,
-              style: GoogleFonts.lexend(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: colors.text,
+    return GestureDetector(
+      onTap: () => _navigateToDetails(context),
+      child: Card(
+        color: colors.surface,
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cabeçalho do Card
+              _buildHeader(context),
+              const SizedBox(height: 12),
+              // Título da Atividade
+              Text(
+                widget.activityData.activityTitle,
+                style: GoogleFonts.lexend(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: colors.text,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            // Mapa com a rota
-            _buildMap(),
-            const SizedBox(height: 12),
-            // Estatísticas
-            _buildStats(),
-            const SizedBox(height: 16),
-            // Botões de Ação
-            _buildActionButtons(context),
-          ],
+              const SizedBox(height: 8),
+              // Mapa com a rota
+              _buildMediaSection(), // NOVO: Seção de Mídia
+              const SizedBox(height: 16),
+              // Estatísticas
+              _buildStats(),
+              const SizedBox(height: 16),
+              // Botões de Ação
+              _buildActionButtons(context),
+            ],
+          ),
         ),
       ),
     );
@@ -177,6 +201,25 @@ class _ActivityCardState extends State<ActivityCard> {
                   );
                 },
               );
+            } else if (value == 'edit_activity' || value == 'add_media') {
+              _editActivity(context);
+            } else if (value == 'edit_map_visibility') {
+              _showPrivacyDialog(context);
+            } else if (value == 'refresh') {
+              // Simula uma atualização
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Atividade atualizada!')),
+              );
+              setState(() {});
+            } else if (value == 'crop_activity' || value == 'save_route') {
+              // Mostra uma mensagem para funcionalidades não implementadas
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Funcionalidade "${_getMenuLabel(value)}" ainda não implementada.',
+                  ),
+                ),
+              );
             } else {
               // print('$value selecionado');
             }
@@ -217,26 +260,238 @@ class _ActivityCardState extends State<ActivityCard> {
     );
   }
 
-  Widget _buildMap() {
-    return SizedBox(
-      height: 150,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
+  /// Retorna o rótulo de texto para um valor de menu.
+  String _getMenuLabel(String value) {
+    switch (value) {
+      case 'add_media':
+        return 'Adicionar midia';
+      case 'edit_activity':
+        return 'Editar atividade';
+      case 'crop_activity':
+        return 'Recortar atividade';
+      case 'edit_map_visibility':
+        return 'Editar visibilidade do mapa';
+      case 'save_route':
+        return 'Salvar rota';
+      default:
+        return '';
+    }
+  }
+
+  /// Navega para a tela de detalhes da atividade.
+  void _navigateToDetails(BuildContext context) async {
+    // A navegação para a tela de detalhes é a mesma que a de comentários.
+    final result = await Navigator.push<List<String>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CommentsScreen(activityData: widget.activityData),
+      ),
+    );
+
+    // Se a tela de detalhes retornou uma nova lista de comentários, atualiza o estado.
+    if (result != null) {
+      setState(() {
+        _commentsCount = result.length;
+      });
+    }
+  }
+
+  /// Abre a tela de edição da atividade.
+  Future<void> _editActivity(BuildContext context) async {
+    final updatedActivity = await Navigator.push<ActivityData>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => FinishedConfirmationSheet(
+          activityData: widget.activityData,
+          isEditing: true, // Indica que estamos em modo de edição
+          onSaveAndNavigate: (editedData) {
+            Navigator.of(context).pop(editedData);
+          },
+          onDiscard: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
+
+    if (updatedActivity != null) {
+      // NOVO: Salva a atividade atualizada no repositório antes de atualizar a UI.
+      await _repository.updateActivity(updatedActivity);
+      widget.onUpdate(updatedActivity);
+    }
+  }
+
+  /// Mostra um diálogo para editar a privacidade da atividade.
+  void _showPrivacyDialog(BuildContext context) {
+    final colors = AppColors.of(context);
+    PrivacyOption selectedOption = _privacyFromString(
+      widget.activityData.privacy,
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: colors.surface,
+              title: Text(
+                'Editar Visibilidade',
+                style: GoogleFonts.lexend(color: colors.text),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: PrivacyOption.values.map((option) {
+                  return RadioListTile<PrivacyOption>(
+                    title: Text(
+                      _getPrivacyLabel(option),
+                      style: GoogleFonts.lexend(color: colors.text),
+                    ),
+                    value: option,
+                    groupValue: selectedOption,
+                    onChanged: (PrivacyOption? value) {
+                      if (value != null) {
+                        setDialogState(() => selectedOption = value);
+                      }
+                    },
+                    activeColor: AppColors.primary,
+                  );
+                }).toList(),
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Cancelar', style: GoogleFonts.lexend()),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                TextButton(
+                  child: Text('Salvar', style: GoogleFonts.lexend()),
+                  onPressed: () async {
+                    final updatedActivity = widget.activityData.copyWith(
+                      privacy: _privacyToString(selectedOption),
+                    );
+                    await _repository.updateActivity(updatedActivity);
+                    widget.onUpdate(updatedActivity);
+                    // ignore: use_build_context_synchronously
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Funções auxiliares de privacidade (poderiam ser movidas para um utilitário)
+  String _getPrivacyLabel(PrivacyOption option) {
+    switch (option) {
+      case PrivacyOption.public:
+        return 'Público';
+      case PrivacyOption.followers:
+        return 'Apenas Seguidores';
+      case PrivacyOption.private:
+        return 'Privado';
+    }
+  }
+
+  PrivacyOption _privacyFromString(String privacy) {
+    return PrivacyOption.values.firstWhere(
+      (e) => e.toString().split('.').last == privacy,
+      orElse: () => PrivacyOption.public,
+    );
+  }
+
+  String _privacyToString(PrivacyOption option) {
+    return option.toString().split('.').last;
+  }
+
+  /// NOVO: Constrói a seção de mídia com mapa e fotos.
+  Widget _buildMediaSection() {
+    // Se não houver mídias, mostra um mapa grande.
+    if (widget.activityData.mediaPaths.isEmpty) {
+      return SizedBox(
+        height: 150,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: widget.activityData.routePoints.isNotEmpty
+                  ? widget.activityData.routePoints.first
+                  : const LatLng(0, 0),
+              zoom: 14,
+            ),
+            polylines: {
+              Polyline(
+                polylineId: const PolylineId('route'),
+                points: widget.activityData.routePoints,
+                color: AppColors.primary,
+                width: 4,
+              ),
+            },
+            onMapCreated: (controller) {
+              if (widget.activityData.routePoints.isNotEmpty) {
+                controller.animateCamera(
+                  CameraUpdate.newLatLngBounds(
+                    LatLngBoundsUtils.fromLatLngList(
+                      widget.activityData.routePoints,
+                    ),
+                    50.0, // padding
+                  ),
+                );
+              }
+            },
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            scrollGesturesEnabled: false,
+            zoomGesturesEnabled: false,
+          ),
+        ),
+      );
+    } else {
+      // Se houver mídias, mostra a lista horizontal.
+      return SizedBox(
+        height: 120, // Altura fixa para a lista de mídia
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            _buildMapThumbnail(), // Miniatura do mapa sempre primeiro
+            const SizedBox(width: 12),
+            // Mapeia a lista de caminhos de mídia para widgets de miniatura
+            ...widget.activityData.mediaPaths.map(
+              (path) => Padding(
+                padding: const EdgeInsets.only(right: 12.0),
+                child: _buildMediaThumbnail(File(path)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// NOVO: Card de miniatura do mapa.
+  Widget _buildMapThumbnail() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 120,
+        height: 120,
+        color: Colors.grey.shade300,
         child: GoogleMap(
-          initialCameraPosition: widget.activityData.routePoints.isEmpty
-              ? const CameraPosition(target: LatLng(0, 0), zoom: 14)
-              : CameraPosition(
-                  target: LatLngBoundsUtils.fromLatLngList(
-                    widget.activityData.routePoints,
-                  ).center,
-                  zoom: 14,
-                ), // O zoom será ajustado pelo bounds
+          initialCameraPosition: CameraPosition(
+            target: widget.activityData.routePoints.isNotEmpty
+                ? widget.activityData.routePoints.first
+                : const LatLng(0, 0),
+            zoom: 14,
+          ),
           polylines: {
             Polyline(
-              polylineId: const PolylineId('route'),
+              polylineId: const PolylineId('route-preview'),
               points: widget.activityData.routePoints,
               color: AppColors.primary,
-              width: 4,
+              width: 3,
             ),
           },
           onMapCreated: (controller) {
@@ -246,15 +501,50 @@ class _ActivityCardState extends State<ActivityCard> {
                   LatLngBoundsUtils.fromLatLngList(
                     widget.activityData.routePoints,
                   ),
-                  50.0, // padding
+                  30.0, // Padding menor para a miniatura
                 ),
               );
             }
           },
-          myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
           scrollGesturesEnabled: false,
           zoomGesturesEnabled: false,
+          myLocationButtonEnabled: false,
+          mapToolbarEnabled: false,
+        ),
+      ),
+    );
+  }
+
+  /// NOVO: Card de miniatura da foto.
+  Widget _buildMediaThumbnail(File mediaFile) {
+    final isVideo = [
+      '.mp4',
+      '.mov',
+      '.avi',
+    ].any((ext) => mediaFile.path.toLowerCase().endsWith(ext));
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 120,
+        height: 120,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (isVideo)
+              Container(color: Colors.black) // Fundo preto para vídeos
+            else
+              Image.file(mediaFile, fit: BoxFit.cover),
+            if (isVideo)
+              const Center(
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -338,25 +628,7 @@ class _ActivityCardState extends State<ActivityCard> {
           child: _actionButton(
             Icons.comment_outlined,
             _commentsCount,
-            () async {
-              // Navega para a tela de comentários e aguarda um resultado
-              final result = await Navigator.push<List<String>>(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      CommentsScreen(activityData: widget.activityData),
-                ),
-              );
-
-              // Se a tela de comentários retornou uma nova lista, atualiza o estado
-              if (result != null) {
-                setState(() {
-                  _commentsCount = result.length;
-                });
-              }
-            },
-            // Adiciona um indicador se houver parceiros marcados
-            badgeCount: widget.activityData.taggedPartnerIds.length,
+            () => _navigateToDetails(context),
           ),
         ),
         const SizedBox(width: 8),
@@ -386,7 +658,6 @@ class _ActivityCardState extends State<ActivityCard> {
     int count,
     VoidCallback onPressed, {
     bool isLiked = false,
-    int badgeCount = 0,
   }) {
     final colors = AppColors.of(context);
 
@@ -402,43 +673,22 @@ class _ActivityCardState extends State<ActivityCard> {
             width: 1.5,
           ),
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: isLiked ? AppColors.primary : colors.textSecondary,
-                  size: 22,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  count.toString(),
-                  style: GoogleFonts.lexend(
-                    color: isLiked ? AppColors.primary : colors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            Icon(
+              icon,
+              color: isLiked ? AppColors.primary : colors.textSecondary,
+              size: 22,
             ),
-            if (badgeCount > 0)
-              Positioned(
-                top: -8,
-                right: -8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '+$badgeCount',
-                    style: const TextStyle(color: Colors.black, fontSize: 10),
-                  ),
-                ),
+            const SizedBox(width: 6),
+            Text(
+              count.toString(),
+              style: GoogleFonts.lexend(
+                color: isLiked ? AppColors.primary : colors.textSecondary,
+                fontWeight: FontWeight.w600,
               ),
+            ),
           ],
         ),
       ),

@@ -6,7 +6,7 @@ import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
-import '../widgets/activity_card.dart';
+import 'package:hibrido/widgets/activity_card.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -18,7 +18,9 @@ class ActivityScreen extends StatefulWidget {
 class ActivityScreenState extends State<ActivityScreen>
     with WidgetsBindingObserver {
   final ActivityRepository _repository = ActivityRepository();
-  late Future<List<ActivityData>> _activitiesFuture;
+  // NOVO: Gerencia a lista de atividades no estado.
+  List<ActivityData> _activities = [];
+  bool _isLoading = true;
 
   // --- Spotify State ---
   final SpotifyService _spotifyService = SpotifyService();
@@ -56,8 +58,15 @@ class ActivityScreenState extends State<ActivityScreen>
 
   /// Carrega ou recarrega a lista de atividades do repositório.
   void reloadActivities() {
-    _activitiesFuture = _repository.getActivities();
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _isLoading = true);
+    _repository.getActivities().then((loadedActivities) {
+      if (mounted) {
+        setState(() {
+          _activities = loadedActivities;
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   /// Ouve as mudanças no estado do player do Spotify.
@@ -106,73 +115,66 @@ class ActivityScreenState extends State<ActivityScreen>
         ),
       ),
       // Usa um FutureBuilder para construir a UI com base no estado do carregamento das atividades.
-      body: Stack(
-        children: [
-          FutureBuilder<List<ActivityData>>(
-            future: _activitiesFuture,
-            builder: (context, snapshot) {
-              // Mostra um indicador de progresso enquanto os dados estão carregando.
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              // Mostra uma mensagem de erro se algo der errado.
-              if (snapshot.hasError) {
-                return Center(
-                  child: Text('Erro ao carregar atividades: ${snapshot.error}'),
-                );
-              }
-              // Mostra uma mensagem se não houver atividades salvas.
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Text(
-                      'Não tem atividades',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.lexend(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: colors.text.withOpacity(0.5),
-                      ),
-                    ),
-                  ),
-                );
-              }
+      body: _buildBody(colors),
+    );
+  }
 
-              final activities = snapshot.data!;
+  Widget _buildBody(AppColors colors) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-              // Constrói a lista de atividades quando os dados estiverem prontos.
-              // Adiciona o RefreshIndicator para permitir "puxar para atualizar".
-              return RefreshIndicator(
-                onRefresh: () async => reloadActivities(),
-                child: ListView.separated(
-                  // Adiciona padding na parte inferior para não sobrepor o player
-                  padding: const EdgeInsets.only(bottom: 100),
-                  itemCount: activities.length,
-                  itemBuilder: (context, index) {
-                    // Para cada item na lista de dados, criamos um widget de card.
-                    return ActivityCard(
-                      activityData: activities[index],
-                      onDelete:
-                          reloadActivities, // Passa a função de recarregar
-                    );
-                  },
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 8),
-                ),
+    if (_activities.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(
+            'Não tem atividades',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.lexend(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: colors.text.withOpacity(0.5),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () async => reloadActivities(),
+          child: ListView.separated(
+            padding: const EdgeInsets.only(bottom: 100),
+            itemCount: _activities.length,
+            itemBuilder: (context, index) {
+              return ActivityCard(
+                activityData: _activities[index],
+                onDelete: () {
+                  setState(() {
+                    _activities.removeAt(index);
+                  });
+                },
+                onUpdate: (updatedActivity) {
+                  setState(() {
+                    _activities[index] = updatedActivity;
+                  });
+                },
               );
             },
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
           ),
-          // Miniplayer do Spotify
-          if (_isPlayerVisible)
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: _buildMinimizedPlayer(),
-            ),
-        ],
-      ),
+        ),
+        // Miniplayer do Spotify
+        if (_isPlayerVisible)
+          Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: _buildMinimizedPlayer(),
+          ),
+      ],
     );
   }
 

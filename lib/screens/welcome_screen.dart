@@ -9,8 +9,8 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Define a cor de fundo para preto sólido (tertiary), combinando com a imagem de referência.
-      backgroundColor: CustomColors.tertiary,
+      // Define a cor de fundo para o background do tema escuro.
+      backgroundColor: AppColors.dark().background,
       body: Stack(
         children: [
           // Imagem de fundo ou elementos visuais decorativos
@@ -67,16 +67,15 @@ class WelcomeScreen extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.run_circle_outlined,
-                        color: CustomColors
-                            .primary, // Cor primary para o ícone do logo
+                        color: AppColors
+                            .primary, // Cor primária para o ícone do logo
                         size: 30,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Triunfal',
                         style: GoogleFonts.lexend(
-                          color: CustomColors
-                              .textLight, // Texto claro para contraste
+                          color: Colors.white, // Texto branco para contraste
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
                         ),
@@ -90,7 +89,7 @@ class WelcomeScreen extends StatelessWidget {
                   Text(
                     'Correr\nCaminhar\nAndar',
                     style: GoogleFonts.lexend(
-                      color: CustomColors.textLight,
+                      color: Colors.white,
                       fontSize: 65,
                       fontWeight: FontWeight.bold,
                       height:
@@ -107,8 +106,8 @@ class WelcomeScreen extends StatelessWidget {
                     child: Text(
                       'Compartilha sua corrida de um jeito triunfal',
                       style: GoogleFonts.lexend(
-                        color: CustomColors.textLight.withAlpha(
-                          (255 * 0.8).round(),
+                        color: Colors.white.withAlpha(
+                          (255 * 0.8).round(), // Texto com leve transparência
                         ), // Texto com leve transparência
                         fontSize: 16,
                       ),
@@ -130,15 +129,15 @@ class WelcomeScreen extends StatelessWidget {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: CustomColors
-                            .primary, // Cor primary vibrante para o botão
+                        backgroundColor: AppColors
+                            .primary, // Cor primária vibrante para o botão
                         shape: RoundedRectangleBorder(
                           // Arredondamento máximo para um formato oval/circular
                           borderRadius: BorderRadius.circular(100),
                         ),
                         elevation: 10, // Sombra para dar profundidade
-                        shadowColor: CustomColors.primary.withAlpha(
-                          (255 * 0.5).round(),
+                        shadowColor: AppColors.primary.withAlpha(
+                          (255 * 0.5).round(), // Cor da sombra
                         ), // Cor da sombra
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -153,8 +152,8 @@ class WelcomeScreen extends StatelessWidget {
                           Text(
                             'COMEÇAR',
                             style: GoogleFonts.lexend(
-                              color: CustomColors
-                                  .textDark, // Texto escuro para contraste com o fundo primary
+                              color: AppColors.dark()
+                                  .background, // Texto escuro para contraste com o fundo primário
                               fontSize: 20,
                               fontWeight: FontWeight.w600,
                             ),

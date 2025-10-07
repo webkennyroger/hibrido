@@ -34,12 +34,14 @@ class FinishedConfirmationSheet extends StatefulWidget {
   final ActivityData activityData;
   // O callback agora recebe o título editado
   final Function(ActivityData activityData) onSaveAndNavigate;
+  final bool isEditing; // NOVO: Flag para modo de edição
   final VoidCallback onDiscard;
 
   const FinishedConfirmationSheet({
     super.key,
     required this.activityData,
     required this.onSaveAndNavigate,
+    this.isEditing = false, // Valor padrão é false
     required this.onDiscard,
   });
 
@@ -62,7 +64,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   MapTypeOption _selectedMapTypeOption = MapTypeOption.normal;
 
   // NOVO: Estado para armazenar as imagens selecionadas.
-  final List<File> _selectedImages = [];
+  final List<File> _selectedMedia = [];
   final ImagePicker _picker = ImagePicker();
 
   // Lista de parceiros selecionados (usando IDs).
@@ -90,13 +92,26 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   @override
   void initState() {
     super.initState();
-    // O campo de título começa vazio para que o placeholder seja exibido.
-    _titleController = TextEditingController();
-    // Inicializa o controller de anotações (assumindo que o ActivityData não tem campo de notas)
-    _notesController = TextEditingController();
-    // Inicializa o esporte com base no título da atividade
-    _selectedSport = _sportFromString(widget.activityData.activityTitle);
+    // Se estiver editando, preenche os campos com os dados existentes.
+    _titleController = TextEditingController(
+      text: widget.activityData.activityTitle,
+    );
+    _notesController = TextEditingController(
+      text: widget.activityData.notes ?? '',
+    );
+    _selectedSport = _sportFromString(widget.activityData.sport);
+    _selectedMoodIndex = widget.activityData.mood;
+
+    // Preenche os parceiros marcados
+    _selectedPartnerIds.addAll(widget.activityData.taggedPartnerIds);
     _partnersCount = _selectedPartnerIds.length;
+
+    // Preenche as imagens existentes se estiver editando
+    if (widget.isEditing) {
+      _selectedMedia.addAll(
+        widget.activityData.mediaPaths.map((path) => File(path)),
+      );
+    }
   }
 
   @override
@@ -145,30 +160,6 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     }
   }
 
-  // Mapeia o enum de privacidade para um rótulo de texto.
-  String _getPrivacyLabel(PrivacyOption option) {
-    switch (option) {
-      case PrivacyOption.public:
-        return 'Público';
-      case PrivacyOption.followers:
-        return 'Apenas Seguidores';
-      case PrivacyOption.private:
-        return 'Privado';
-    }
-  }
-
-  // Mapeia o enum de privacidade para um ícone.
-  IconData _getPrivacyIcon(PrivacyOption option) {
-    switch (option) {
-      case PrivacyOption.public:
-        return Icons.public;
-      case PrivacyOption.followers:
-        return Icons.group;
-      case PrivacyOption.private:
-        return Icons.lock;
-    }
-  }
-
   // Função para gerar um título padrão com base no período do dia.
   String _generateDefaultTitle() {
     final hour = DateTime.now().hour;
@@ -193,22 +184,6 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     }
   }
 
-  // Retorna a cor correta para o rótulo de privacidade.
-  Color _getPrivacyColor(BuildContext context, String privacyValue) {
-    final colors = AppColors.of(context);
-    if (privacyValue == _getPrivacyLabel(PrivacyOption.public)) {
-      return AppColors.primary; // Verde
-    }
-    if (privacyValue == _getPrivacyLabel(PrivacyOption.private)) {
-      return AppColors.error; // Vermelho
-    }
-    if (privacyValue == _getPrivacyLabel(PrivacyOption.followers)) {
-      return AppColors.warning; // Laranja para avisos
-    }
-    // Cor padrão para outros valores (como 'Adicionada')
-    return colors.text.withOpacity(0.5);
-  }
-
   // Função auxiliar para formatar a distância (para KM)
   String _formatDistance(double distanceInMeters) {
     return (distanceInMeters / 1000).toStringAsFixed(2);
@@ -230,7 +205,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   }
 
   // NOVO: Mostra um menu para escolher entre Câmera e Galeria.
-  void _showImageSourceActionSheet(BuildContext context) {
+  void _showMediaSourceActionSheet(BuildContext context) {
     final colors = AppColors.of(context);
     showModalBottomSheet(
       context: context,
@@ -240,10 +215,24 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
           child: Wrap(
             children: <Widget>[
               ListTile(
-                leading: Icon(Icons.photo_library, color: colors.text),
-                title: Text('Galeria', style: TextStyle(color: colors.text)),
+                leading: Icon(Icons.image, color: colors.text),
+                title: Text(
+                  'Foto da Galeria',
+                  style: TextStyle(color: colors.text),
+                ),
                 onTap: () {
-                  _pickImage(ImageSource.gallery);
+                  _pickMedia(ImageSource.gallery, isVideo: false);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.videocam, color: colors.text),
+                title: Text(
+                  'Vídeo da Galeria',
+                  style: TextStyle(color: colors.text),
+                ),
+                onTap: () {
+                  _pickMedia(ImageSource.gallery, isVideo: true);
                   Navigator.of(context).pop();
                 },
               ),
@@ -251,7 +240,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                 leading: Icon(Icons.photo_camera, color: colors.text),
                 title: Text('Câmera', style: TextStyle(color: colors.text)),
                 onTap: () {
-                  _pickImage(ImageSource.camera);
+                  _pickMedia(ImageSource.camera, isVideo: false);
                   Navigator.of(context).pop();
                 },
               ),
@@ -263,9 +252,20 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   }
 
   // NOVO: Lógica para capturar a imagem.
-  Future<void> _pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source);
-    if (image != null) setState(() => _selectedImages.add(File(image.path)));
+  Future<void> _pickMedia(ImageSource source, {bool isVideo = false}) async {
+    final XFile? pickedFile;
+    if (isVideo) {
+      pickedFile = await _picker.pickVideo(source: source);
+    } else {
+      pickedFile = await _picker.pickImage(source: source);
+    }
+
+    if (pickedFile != null) {
+      final file = pickedFile; // Create a local, non-nullable variable.
+      setState(() {
+        _selectedMedia.add(File(file.path));
+      });
+    }
   }
 
   // NOVO: Mostra o modal para selecionar o tipo de mapa.
@@ -515,62 +515,6 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     );
   }
 
-  /// Mostra um modal para o usuário selecionar a privacidade.
-  void _showPrivacySelectorModal(BuildContext context) {
-    final colors = AppColors.of(context);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: colors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Visibilidade da Atividade',
-                style: GoogleFonts.lexend(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: colors.text,
-                ),
-              ),
-              const SizedBox(height: 20),
-              for (var option in PrivacyOption.values)
-                ListTile(
-                  leading: Icon(
-                    _getPrivacyIcon(option),
-                    color: _getPrivacyColor(context, _getPrivacyLabel(option)),
-                  ),
-                  title: Text(
-                    _getPrivacyLabel(option),
-                    style: GoogleFonts.lexend(color: colors.text),
-                  ),
-                  onTap: () {
-                    setState(() => _selectedPrivacy = option);
-                    Navigator.pop(context);
-                  },
-                  trailing: _selectedPrivacy == option
-                      ? Icon(
-                          Icons.check,
-                          color: _getPrivacyColor(
-                            context,
-                            _getPrivacyLabel(option),
-                          ),
-                        )
-                      : null,
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   /// Mostra um modal para selecionar parceiros de atividade.
   void _showPartnerSelectorModal(BuildContext context) {
     final colors = AppColors.of(context);
@@ -678,13 +622,13 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
               children: [
                 _buildMapCard(),
                 const SizedBox(width: 12),
-                ..._selectedImages.map(
-                  (image) => Padding(
+                ..._selectedMedia.map(
+                  (mediaFile) => Padding(
                     padding: const EdgeInsets.only(right: 12.0),
-                    child: _buildPhotoThumbnail(image),
+                    child: _buildMediaThumbnail(mediaFile),
                   ),
                 ),
-                _buildAddPhotoCard(),
+                _buildAddMediaCard(),
               ],
             ),
           ),
@@ -726,7 +670,9 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
             GoogleMap(
               mapType: _currentMapType,
               initialCameraPosition: CameraPosition(
-                target: widget.activityData.routePoints.first,
+                target: widget.activityData.routePoints.isNotEmpty
+                    ? widget.activityData.routePoints.first
+                    : const LatLng(0, 0), // Evita erro se a lista estiver vazia
                 zoom: 14,
               ),
               polylines: {
@@ -761,17 +707,43 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   }
 
   /// NOVO: Card de miniatura da foto selecionada.
-  Widget _buildPhotoThumbnail(File image) {
+  Widget _buildMediaThumbnail(File mediaFile) {
+    final isVideo = [
+      '.mp4',
+      '.mov',
+      '.avi',
+    ].any((ext) => mediaFile.path.toLowerCase().endsWith(ext));
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: Image.file(image, width: 120, height: 120, fit: BoxFit.cover),
+      child: SizedBox(
+        width: 120,
+        height: 120,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (isVideo)
+              Container(color: Colors.black) // Fundo preto para vídeos
+            else
+              Image.file(mediaFile, fit: BoxFit.cover),
+            if (isVideo)
+              const Center(
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   /// NOVO: Card para adicionar nova foto.
-  Widget _buildAddPhotoCard() {
+  Widget _buildAddMediaCard() {
     return GestureDetector(
-      onTap: () => _showImageSourceActionSheet(context),
+      onTap: () => _showMediaSourceActionSheet(context),
       child: DottedBorder(
         color: AppColors.primary,
         strokeWidth: 2,
@@ -791,7 +763,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Adicionar foto',
+                'Adicionar mídia',
                 style: GoogleFonts.lexend(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w500,
@@ -993,7 +965,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Detalhes da atividade',
+          widget.isEditing ? 'Editar Atividade' : 'Detalhes da atividade',
           style: GoogleFonts.lexend(
             color: colors.text,
             fontWeight: FontWeight.bold,
@@ -1002,7 +974,10 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.error),
+            icon: Icon(
+              widget.isEditing ? Icons.close : Icons.delete_outline,
+              color: AppColors.error,
+            ),
             onPressed: widget.onDiscard,
           ),
         ],
@@ -1073,28 +1048,18 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
             const SizedBox(height: 24),
             _buildTitleField(), // Campo para o nome da atividade
             const SizedBox(height: 24),
-            _buildSportSelectorRow(), // Seletor de tipo de atividade
-            const SizedBox(height: 32),
-            _buildMediaSection(), // NOVA seção de mídia
-            const SizedBox(height: 24),
             _buildNotesField(), // Campo de texto para anotações
             const SizedBox(height: 24),
-            const Divider(thickness: 1),
-            const SizedBox(height: 24),
-            _buildVisibilityHeader(), // Título da seção
-            const SizedBox(height: 24),
-            _buildInfoRow(
-              Icons.lock_open,
-              'Privacidade',
-              _getPrivacyLabel(_selectedPrivacy),
-              () => _showPrivacySelectorModal(context),
-            ),
+            _buildSportSelectorRow(), // Seletor de tipo de atividade
+            const SizedBox(height: 32),
             _buildInfoRow(
               Icons.group,
               'Parceiros de Atividade',
               '$_partnersCount',
               () => _showPartnerSelectorModal(context),
             ),
+            const SizedBox(height: 24),
+            _buildMediaSection(), // NOVA seção de mídia
           ],
         ),
       ),
@@ -1128,6 +1093,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                   privacy: _privacyOptionToString(_selectedPrivacy),
                   notes: _notesController.text.trim(),
                   taggedPartnerIds: _selectedPartnerIds.toList(),
+                  mediaPaths: _selectedMedia.map((file) => file.path).toList(),
                 );
                 widget.onSaveAndNavigate(finalActivityData);
               },
@@ -1241,11 +1207,9 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                   Text(
                     value,
                     style: GoogleFonts.lexend(
-                      color: label == 'Privacidade'
-                          ? _getPrivacyColor(context, value)
-                          : (value == 'Adicionada'
-                                ? AppColors.primary
-                                : colors.text.withOpacity(0.5)),
+                      color: (value == 'Adicionada'
+                          ? AppColors.primary
+                          : colors.text.withOpacity(0.5)),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),

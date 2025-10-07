@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
+import 'package:hibrido/features/settings/screens/account_settings_screen.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
@@ -121,35 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header do perfil
-                    Row(
-                      children: [
-                        // Exibe a imagem de perfil do usuário.
-                        CircleAvatar(backgroundImage: user.profileImage),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Texto de saudação para o usuário.
-                            Text(
-                              user.name.toUpperCase(),
-                              style: GoogleFonts.lexend(
-                                color: colors.text,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            // Subtítulo ou status do usuário.
-                            Text(
-                              user.location,
-                              style: GoogleFonts.lexend(
-                                color: colors.text.withOpacity(0.7),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    _buildHeader(context, user),
                     const SizedBox(height: 16),
                     // Calendário no topo
                     // Chama o método que constrói e exibe o widget do calendário.
@@ -177,6 +150,66 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Constrói o cabeçalho da tela com informações do usuário e botão de configurações.
+  // Widget _buildHeader(BuildContext context, dynamic user) { // <-- Linha removida por engano
+  Widget _buildHeader(BuildContext context, dynamic user) {
+    // <-- Linha restaurada
+    final colors = AppColors.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(backgroundImage: user.profileImage),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.name.toUpperCase(),
+                  style: GoogleFonts.lexend(
+                    color: colors.text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  user.location,
+                  style: GoogleFonts.lexend(
+                    color: colors.text.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        // Botão de Configurações
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AccountSettingsScreen(),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5),
+              ],
+            ),
+            child: Icon(Icons.settings, color: colors.text),
+          ),
+        ),
+      ],
     );
   }
 

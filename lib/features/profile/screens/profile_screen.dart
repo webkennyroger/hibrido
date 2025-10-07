@@ -23,6 +23,21 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  /// Lida com a ação de "puxar para atualizar".
+  Future<void> _handleRefresh() async {
+    // Simula uma chamada de rede para atualizar os dados do usuário.
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Em um aplicativo real, você poderia recarregar os dados do provedor/repositório.
+    // Exemplo: context.read<UserProvider>().fetchUser();
+    // Por enquanto, apenas chamamos setState para indicar que a atualização terminou.
+    if (mounted) {
+      setState(() {
+        // Isso acionará uma reconstrução, atualizando os dados do provedor.
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -33,75 +48,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Usaremos a cor terciária (0xFF1E1E1E) como fundo da tela
     return Scaffold(
       backgroundColor: colors.background,
-      // NOVO: Usando CustomScrollView para um controle mais fino do scroll
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: Colors.transparent,
-            expandedHeight: 350.0, // Altura do cabeçalho expandido
-            pinned: true,
-            automaticallyImplyLeading: false, // Remove o botão de voltar padrão
-            flexibleSpace: FlexibleSpaceBar(
-              background: _buildProfileHeader(context, user),
-            ),
-          ),
-          // O conteúdo restante da tela é colocado em um SliverList.
-          SliverList(
-            delegate: SliverChildListDelegate([
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                child: Column(
-                  children: [
-                    _buildOptionCard(
-                      label: 'Minhas Atividades',
-                      icon: Icons.directions_run_rounded,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ActivityScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildOptionCard(
-                      label: 'Conquistas',
-                      icon: Icons.emoji_events_outlined,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ChallengesScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(
-                      color: Colors.white12,
-                      height: 32,
-                      thickness: 1,
-                    ),
-                    _buildOptionCard(
-                      label: 'Configurações',
-                      icon: Icons.settings_outlined,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AccountSettingsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+      // NOVO: Adiciona o RefreshIndicator para permitir "puxar para atualizar".
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              expandedHeight: 350.0, // Altura do cabeçalho expandido
+              pinned: true,
+              automaticallyImplyLeading:
+                  false, // Remove o botão de voltar padrão
+              flexibleSpace: FlexibleSpaceBar(
+                background: _buildProfileHeader(context, user),
               ),
-            ]),
-          ),
-        ],
+            ),
+            // O conteúdo restante da tela é colocado em um SliverList.
+            SliverList(
+              delegate: SliverChildListDelegate([
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    children: [
+                      _buildOptionCard(
+                        label: 'Minhas Atividades',
+                        icon: Icons.directions_run_rounded,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ActivityScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildOptionCard(
+                        label: 'Conquistas',
+                        icon: Icons.emoji_events_outlined,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ChallengesScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(
+                        color: Colors.white12,
+                        height: 32,
+                        thickness: 1,
+                      ),
+                      _buildOptionCard(
+                        label: 'Configurações',
+                        icon: Icons.settings_outlined,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const AccountSettingsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          ],
+        ),
       ),
     );
   }

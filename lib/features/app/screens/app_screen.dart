@@ -36,13 +36,19 @@ class _AppScreenState extends State<AppScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     // Scaffold é a estrutura principal da tela, que contém o corpo (body) e a barra de navegação inferior.
-    return Scaffold(
-      // IndexedStack exibe apenas um widget da lista `_screens` por vez, com base no `_selectedIndex`.
-      // Ele é eficiente pois mantém o estado das outras telas que não estão visíveis.
-      body: IndexedStack(index: _selectedIndex, children: _screens),
-      // Define a barra de navegação inferior da tela, construída pelo método `_buildBottomNavigationBar`.
-      bottomNavigationBar: _buildBottomNavigationBar(context),
+    return Material(
+      color: colors.background,
+      child: Scaffold(
+        // IndexedStack exibe apenas um widget da lista `_screens` por vez, com base no `_selectedIndex`.
+        // Ele é eficiente pois mantém o estado das outras telas que não estão visíveis.
+        backgroundColor: colors.background,
+        body: IndexedStack(index: _selectedIndex, children: _screens),
+        // Define a barra de navegação inferior da tela, construída pelo método `_buildBottomNavigationBar`.
+        bottomNavigationBar: _buildBottomNavigationBar(context),
+      ),
     );
   }
 
