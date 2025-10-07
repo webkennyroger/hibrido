@@ -18,6 +18,9 @@ class _AppScreenState extends State<AppScreen> {
 
   // Lista de telas que serão exibidas.
   late final List<Widget> _screens;
+  // NOVO: Chave para acessar o estado da ActivityScreen
+  final GlobalKey<State<StatefulWidget>> _activityScreenKey =
+      GlobalKey<State<StatefulWidget>>();
 
   @override
   void initState() {
@@ -25,7 +28,8 @@ class _AppScreenState extends State<AppScreen> {
     // Inicializamos a lista de telas aqui para poder passar o callback para a ProfileScreen.
     _screens = [
       const HomeScreen(),
-      const ActivityScreen(),
+      // NOVO: Passa a chave para a ActivityScreen
+      ActivityScreen(key: _activityScreenKey),
       const ProfileScreen(),
     ];
   }
@@ -44,6 +48,8 @@ class _AppScreenState extends State<AppScreen> {
 
   /// Constrói a barra de navegação inferior customizada.
   Widget _buildBottomNavigationBar(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Padding(
       // Adiciona espaçamento nas bordas da barra de navegação para um visual mais limpo.
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
@@ -55,7 +61,7 @@ class _AppScreenState extends State<AppScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: CustomColors.textLight,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(50),
               boxShadow: [
                 BoxShadow(
@@ -81,11 +87,11 @@ class _AppScreenState extends State<AppScreen> {
           // Container circular que serve como fundo para o botão de corrida.
           Container(
             decoration: BoxDecoration(
-              color: CustomColors.primary,
+              color: AppColors.primary,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: CustomColors.primary.withAlpha((255 * 0.4).round()),
+                  color: AppColors.primary.withAlpha((255 * 0.4).round()),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -93,9 +99,9 @@ class _AppScreenState extends State<AppScreen> {
             ),
             // O botão de ação com o ícone de corrida.
             child: IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.directions_run,
-                color: CustomColors.tertiary,
+                color: AppColors.dark().background,
                 size: 30,
               ),
               // Ao ser pressionado, atualiza o estado para mostrar a tela de Atividade (índice 1).
@@ -109,7 +115,12 @@ class _AppScreenState extends State<AppScreen> {
                 // Se a MapScreen retornar 'true', significa que uma atividade foi salva.
                 // Então, mudamos para a aba de atividades (índice 1).
                 if (result == true) {
-                  setState(() => _selectedIndex = 1);
+                  setState(() {
+                    _selectedIndex = 1;
+                    // NOVO: Força a ActivityScreen a recarregar
+                    (_activityScreenKey.currentState as ActivityScreenState?)
+                        ?.reloadActivities();
+                  });
                 }
               },
             ),
@@ -122,6 +133,8 @@ class _AppScreenState extends State<AppScreen> {
   /// Constrói um item de navegação individual (ícone).
   Widget _buildNavItem(IconData icon, int index) {
     // Verifica se este item de navegação é o que está atualmente selecionado.
+    final colors = AppColors.of(context);
+
     final bool isSelected = index == _selectedIndex;
 
     // GestureDetector detecta o toque no ícone para acionar a mudança de tela.
@@ -140,16 +153,14 @@ class _AppScreenState extends State<AppScreen> {
         // A decoração (fundo colorido) só é aplicada se o item estiver selecionado.
         decoration: isSelected
             ? BoxDecoration(
-                color: CustomColors.primary,
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(25),
               )
             : null,
         // O ícone do item. A cor também muda com base na seleção.
         child: Icon(
           icon,
-          color: isSelected
-              ? CustomColors.textDark
-              : CustomColors.textDark.withAlpha((255 * 0.7).round()),
+          color: isSelected ? colors.text : colors.text.withOpacity(0.7),
           size: 28,
         ),
       ),

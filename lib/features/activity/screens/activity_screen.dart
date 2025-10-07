@@ -12,10 +12,10 @@ class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
-  State<ActivityScreen> createState() => _ActivityScreenState();
+  State<ActivityScreen> createState() => ActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen>
+class ActivityScreenState extends State<ActivityScreen>
     with WidgetsBindingObserver {
   final ActivityRepository _repository = ActivityRepository();
   late Future<List<ActivityData>> _activitiesFuture;
@@ -35,7 +35,7 @@ class _ActivityScreenState extends State<ActivityScreen>
   void initState() {
     super.initState();
     // Carrega as atividades salvas quando a tela é iniciada.
-    _loadActivities();
+    reloadActivities();
     _listenToSpotifyPlayerState();
     WidgetsBinding.instance.addObserver(this);
   }
@@ -51,13 +51,11 @@ class _ActivityScreenState extends State<ActivityScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Recarrega as atividades quando o app volta para o primeiro plano,
     // garantindo que a lista esteja sempre atualizada.
-    if (state == AppLifecycleState.resumed) {
-      _loadActivities();
-    }
+    if (state == AppLifecycleState.resumed) reloadActivities();
   }
 
   /// Carrega ou recarrega a lista de atividades do repositório.
-  void _loadActivities() {
+  void reloadActivities() {
     _activitiesFuture = _repository.getActivities();
     if (mounted) setState(() {});
   }
@@ -92,14 +90,18 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
+        backgroundColor: colors.background,
         elevation: 0,
         title: Text(
           'Atividades',
           style: GoogleFonts.lexend(
             fontWeight: FontWeight.bold,
-            color: CustomColors.textLight,
+            color: colors.text,
           ),
         ),
       ),
@@ -130,9 +132,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                       style: GoogleFonts.lexend(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: CustomColors.textDark.withAlpha(
-                          (255 * 0.5).round(),
-                        ),
+                        color: colors.text.withOpacity(0.5),
                       ),
                     ),
                   ),
@@ -144,7 +144,7 @@ class _ActivityScreenState extends State<ActivityScreen>
               // Constrói a lista de atividades quando os dados estiverem prontos.
               // Adiciona o RefreshIndicator para permitir "puxar para atualizar".
               return RefreshIndicator(
-                onRefresh: () async => _loadActivities(),
+                onRefresh: () async => reloadActivities(),
                 child: ListView.separated(
                   // Adiciona padding na parte inferior para não sobrepor o player
                   padding: const EdgeInsets.only(bottom: 100),
@@ -153,7 +153,8 @@ class _ActivityScreenState extends State<ActivityScreen>
                     // Para cada item na lista de dados, criamos um widget de card.
                     return ActivityCard(
                       activityData: activities[index],
-                      onDelete: _loadActivities, // Passa a função de recarregar
+                      onDelete:
+                          reloadActivities, // Passa a função de recarregar
                     );
                   },
                   separatorBuilder: (context, index) =>
@@ -177,10 +178,11 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   /// Constrói o widget do miniplayer de música.
   Widget _buildMinimizedPlayer() {
+    final colors = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: CustomColors.quaternary,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -211,13 +213,13 @@ class _ActivityScreenState extends State<ActivityScreen>
                   _trackName,
                   style: GoogleFonts.lexend(
                     fontWeight: FontWeight.bold,
-                    color: CustomColors.textDark,
+                    color: colors.text,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   _artistName,
-                  style: GoogleFonts.lexend(color: Colors.grey.shade600),
+                  style: GoogleFonts.lexend(color: colors.textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -226,7 +228,7 @@ class _ActivityScreenState extends State<ActivityScreen>
           IconButton(
             icon: Icon(
               _isMusicPlaying ? Icons.pause : Icons.play_arrow,
-              color: CustomColors.textDark,
+              color: colors.text,
               size: 32,
             ),
             onPressed: () {
@@ -238,11 +240,7 @@ class _ActivityScreenState extends State<ActivityScreen>
             },
           ),
           IconButton(
-            icon: const Icon(
-              Icons.skip_next,
-              color: CustomColors.textDark,
-              size: 32,
-            ),
+            icon: Icon(Icons.skip_next, color: colors.text, size: 32),
             onPressed: () {
               _spotifyService.skipNext();
             },

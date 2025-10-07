@@ -4,6 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/core/utils/map_utils.dart';
+import 'package:hibrido/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 
 class CommentsScreen extends StatefulWidget {
@@ -59,19 +61,22 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final user = context.watch<UserProvider>().user;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: Icon(Icons.close, color: colors.text),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Comentários',
           style: GoogleFonts.lexend(
-            color: Colors.black,
+            color: colors.text,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -90,7 +95,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               'Postar',
               style: GoogleFonts.lexend(
                 color: _isPostButtonEnabled
-                    ? CustomColors.primary
+                    ? AppColors.primary
                     : Colors.grey.shade400,
                 fontWeight: FontWeight.bold,
               ),
@@ -112,11 +117,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       children: [
                         Row(
                           children: [
-                            const CircleAvatar(
+                            CircleAvatar(
                               radius: 20,
-                              backgroundImage: NetworkImage(
-                                'https://i.ibb.co/L8Gj18j/avatar.png',
-                              ),
+                              backgroundImage: user.profileImage,
                             ),
                             const SizedBox(width: 12),
                             Column(
@@ -127,12 +130,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                   style: GoogleFonts.lexend(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
+                                    color: colors.text,
                                   ),
                                 ),
                                 Text(
                                   widget.activityData.runTime,
                                   style: GoogleFonts.lexend(
-                                    color: Colors.grey.shade600,
+                                    color: colors.textSecondary,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -146,13 +150,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           style: GoogleFonts.lexend(
                             fontWeight: FontWeight.bold,
                             fontSize: 22,
+                            color: colors.text,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${(widget.activityData.distanceInMeters / 1000).toStringAsFixed(2)} km',
                           style: GoogleFonts.lexend(
-                            color: Colors.grey.shade700,
+                            color: colors.textSecondary,
                             fontSize: 16,
                           ),
                         ),
@@ -190,7 +195,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                 Polyline(
                                   polylineId: const PolylineId('route'),
                                   points: widget.activityData.routePoints,
-                                  color: CustomColors.primary,
+                                  color: AppColors.primary,
                                   width: 4,
                                 ),
                               },
@@ -204,16 +209,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.thumb_up,
-                              color: CustomColors.primary,
+                              color: AppColors.primary,
                               size: 16,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Você e 12 outros', // Exemplo de contagem de curtidas
                               style: GoogleFonts.lexend(
-                                color: Colors.grey.shade700,
+                                color: colors.textSecondary,
                                 fontSize: 14,
                               ),
                             ),
@@ -222,7 +227,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: colors.text.withOpacity(0.1)),
                   // Lista de comentários (placeholder)
                   _comments.isEmpty
                       ? const Padding(
@@ -246,7 +251,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                   'https://i.ibb.co/L8Gj18j/avatar.png',
                                 ),
                               ),
-                              title: Text(_comments[index]),
+                              title: Text(
+                                _comments[index],
+                                style: TextStyle(color: colors.text),
+                              ),
                             );
                           },
                         ),
@@ -258,24 +266,23 @@ class _CommentsScreenState extends State<CommentsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              color: colors.surface,
+              border: Border(
+                top: BorderSide(color: colors.text.withOpacity(0.12)),
+              ),
             ),
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundImage: NetworkImage(
-                    'https://i.ibb.co/L8Gj18j/avatar.png',
-                  ),
-                ),
+                CircleAvatar(radius: 18, backgroundImage: user.profileImage),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextField(
                     controller: _commentController,
                     autofocus: true,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: colors.text),
+                    decoration: InputDecoration(
                       hintText: 'Adicione um comentário...',
+                      hintStyle: TextStyle(color: colors.textSecondary),
                       border: InputBorder.none,
                     ),
                     maxLines: null,

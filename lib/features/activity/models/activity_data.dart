@@ -7,6 +7,7 @@ class ActivityData {
   final String activityTitle;
   final String runTime;
   final String location;
+  final String sport;
   final double distanceInMeters;
   final Duration duration;
   final List<LatLng> routePoints;
@@ -15,6 +16,10 @@ class ActivityData {
   bool isLiked; // Estado de curtida do usuário local
   List<String> commentsList;
   final int shares;
+  final String privacy;
+  final String? notes;
+  final List<String> taggedPartnerIds;
+  final int? mood;
 
   ActivityData({
     required this.id,
@@ -22,6 +27,7 @@ class ActivityData {
     required this.activityTitle,
     required this.runTime,
     required this.location,
+    required this.sport,
     required this.distanceInMeters,
     required this.duration,
     required this.routePoints,
@@ -30,12 +36,21 @@ class ActivityData {
     this.isLiked = false,
     List<String>? commentsList,
     required this.shares,
+    this.privacy = 'public',
+    this.notes,
+    this.taggedPartnerIds = const [],
+    this.mood,
   }) : commentsList = commentsList ?? [];
 
   // Método para criar uma cópia do objeto com alguns valores alterados.
   ActivityData copyWith({
     String? id,
     String? activityTitle,
+    String? sport,
+    int? mood,
+    String? privacy,
+    String? notes,
+    List<String>? taggedPartnerIds,
     int? likes,
     bool? isLiked,
     List<String>? commentsList,
@@ -46,6 +61,7 @@ class ActivityData {
       activityTitle: activityTitle ?? this.activityTitle,
       runTime: runTime,
       location: location,
+      sport: sport ?? this.sport,
       distanceInMeters: distanceInMeters,
       duration: duration,
       routePoints: routePoints,
@@ -54,6 +70,10 @@ class ActivityData {
       isLiked: isLiked ?? this.isLiked,
       commentsList: commentsList ?? this.commentsList,
       shares: shares,
+      privacy: privacy ?? this.privacy,
+      notes: notes ?? this.notes,
+      taggedPartnerIds: taggedPartnerIds ?? this.taggedPartnerIds,
+      mood: mood ?? this.mood,
     );
   }
 
@@ -65,6 +85,7 @@ class ActivityData {
       'activityTitle': activityTitle,
       'runTime': runTime,
       'location': location,
+      'sport': sport,
       'distanceInMeters': distanceInMeters,
       'durationInMilliseconds': duration.inMilliseconds,
       'routePoints': routePoints
@@ -75,6 +96,10 @@ class ActivityData {
       'isLiked': isLiked,
       'commentsList': commentsList,
       'shares': shares,
+      'privacy': privacy,
+      'notes': notes,
+      'taggedPartnerIds': taggedPartnerIds,
+      'mood': mood,
     };
   }
 
@@ -86,6 +111,7 @@ class ActivityData {
       activityTitle: json['activityTitle'],
       runTime: json['runTime'],
       location: json['location'],
+      sport: json['sport'] ?? 'Corrida', // Valor padrão para atividades antigas
       distanceInMeters: json['distanceInMeters'],
       duration: Duration(milliseconds: json['durationInMilliseconds']),
       routePoints: (json['routePoints'] as List)
@@ -96,6 +122,10 @@ class ActivityData {
       isLiked: json['isLiked'] ?? false,
       commentsList: List<String>.from(json['commentsList'] ?? []),
       shares: json['shares'],
+      privacy: json['privacy'] ?? 'public',
+      notes: json['notes'],
+      taggedPartnerIds: List<String>.from(json['taggedPartnerIds'] ?? []),
+      mood: json['mood'],
     );
   }
 }

@@ -4,9 +4,11 @@ import 'dart:ui' as ui;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
+import 'package:hibrido/providers/user_provider.dart';
 import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -95,10 +97,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    // NOVO: Consome os dados do UserProvider
+    final user = context.watch<UserProvider>().user;
+
     // Scaffold é a estrutura base da tela, fornecendo appBar, body, etc.
     return Scaffold(
       // Define a cor de fundo da tela para um tom de cinza escuro.
-      backgroundColor: CustomColors.secondary,
+      backgroundColor: colors.background,
       // SafeArea garante que o conteúdo não seja obstruído por elementos da interface do sistema (como o notch do celular).
       body: SafeArea(
         child: Stack(
@@ -118,31 +124,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         // Exibe a imagem de perfil do usuário.
-                        const CircleAvatar(
-                          backgroundImage: NetworkImage(
-                            'https://placehold.co/60x60/FFFFFF/000000?text=HP',
-                          ),
-                        ),
+                        CircleAvatar(backgroundImage: user.profileImage),
                         const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Texto de saudação para o usuário.
                             Text(
-                              'KENNY ROGER',
+                              user.name.toUpperCase(),
                               style: GoogleFonts.lexend(
-                                color: CustomColors.textDark,
+                                color: colors.text,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             // Subtítulo ou status do usuário.
                             Text(
-                              'Hibrido',
+                              user.location,
                               style: GoogleFonts.lexend(
-                                color: CustomColors.textDark.withAlpha(
-                                  (255 * 0.7).round(),
-                                ),
+                                color: colors.text.withOpacity(0.7),
                                 fontSize: 12,
                               ),
                             ),
@@ -182,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Constrói o widget do miniplayer de música.
   Widget _buildMinimizedPlayer() {
+    final colors = AppColors.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -193,8 +194,8 @@ class _HomeScreenState extends State<HomeScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                CustomColors.textDark.withAlpha((255 * 0.2).round()),
-                CustomColors.primary.withAlpha((255 * 0.5).round()),
+                colors.text.withOpacity(0.2),
+                AppColors.primary.withOpacity(0.5),
               ],
             ),
             borderRadius: BorderRadius.circular(24),
@@ -268,10 +269,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Constrói o card que exibe um resumo dos desafios e permite a navegação para a tela de desafios.
   Widget _buildChallengesCard(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: CustomColors.card,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
@@ -298,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'Desafios Conquistados',
                       style: GoogleFonts.lexend(
-                        color: CustomColors.textDark,
+                        color: colors.text,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -308,9 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       '(4)',
                       style: GoogleFonts.lexend(
-                        color: CustomColors.textDark.withAlpha(
-                          (255 * 0.7).round(),
-                        ),
+                        color: colors.text.withOpacity(0.7),
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -318,11 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 // Ícone de seta para indicar que a seção é navegável.
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: CustomColors.textDark,
-                  size: 16,
-                ),
+                Icon(Icons.arrow_forward_ios, color: colors.text, size: 16),
               ],
             ),
           ),
@@ -356,18 +352,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Constrói um item individual de desafio (ícone e rótulo).
   Widget _buildChallengeItem({required IconData icon, required String label}) {
+    final colors = AppColors.of(context);
     return Column(
       children: [
         // CircleAvatar serve como um fundo circular para o ícone.
         CircleAvatar(
-          backgroundColor: CustomColors.primary.withAlpha((255 * 0.2).round()),
-          child: Icon(icon, color: CustomColors.primary),
+          backgroundColor: AppColors.primary.withOpacity(0.2),
+          child: Icon(icon, color: AppColors.primary),
         ),
         const SizedBox(height: 8),
         // Text exibe o rótulo do desafio abaixo do ícone.
         Text(
           label,
-          style: GoogleFonts.lexend(color: CustomColors.textDark, fontSize: 10),
+          style: GoogleFonts.lexend(color: colors.text, fontSize: 10),
           textAlign: TextAlign.center,
         ),
       ],
@@ -376,15 +373,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Constrói a linha horizontal que contém os quatro cards de métricas.
   Widget _buildMetricsCards() {
+    final colors = AppColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Expanded garante que cada card de métrica ocupe um espaço igual na linha.
         Expanded(
           child: _buildMetricsCard(
-            color: CustomColors.card,
+            color: colors.surface,
             icon: Icons.directions_run,
-            iconColor: CustomColors.primary,
+            iconColor: AppColors.primary,
             title: '6,28',
             value: 'KM',
           ),
@@ -392,9 +390,9 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: _buildMetricsCard(
-            color: CustomColors.card,
+            color: colors.surface,
             icon: Icons.schedule,
-            iconColor: CustomColors.primary,
+            iconColor: AppColors.primary,
             title: '50:14',
             value: 'TEMPO',
           ),
@@ -402,9 +400,9 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: _buildMetricsCard(
-            color: CustomColors.card,
+            color: colors.surface,
             icon: Icons.speed,
-            iconColor: CustomColors.primary,
+            iconColor: AppColors.primary,
             title: '5.19',
             value: 'VELOCIDADE',
           ),
@@ -412,9 +410,9 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: _buildMetricsCard(
-            color: CustomColors.card,
+            color: colors.surface,
             icon: Icons.local_fire_department,
-            iconColor: CustomColors.primary,
+            iconColor: AppColors.primary,
             title: '454',
             value: 'CALORIAS',
           ),
@@ -431,6 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String value,
     Color? iconColor,
   }) {
+    final colors = AppColors.of(context);
     // Container é o corpo do card.
     return Container(
       padding: const EdgeInsets.all(12),
@@ -449,7 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             title,
             style: GoogleFonts.lexend(
-              color: CustomColors.textDark,
+              color: colors.text,
               fontSize: 20,
               fontWeight: FontWeight.w600,
             ),
@@ -458,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             value,
             style: GoogleFonts.lexend(
-              color: CustomColors.textDark.withAlpha((255 * 0.7).round()),
+              color: colors.text.withOpacity(0.7),
               fontSize: 08,
               fontWeight: FontWeight.bold,
             ),
@@ -470,10 +469,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Constrói o widget do calendário usando o pacote `table_calendar`.
   Widget _buildCalendar() {
+    final colors = AppColors.of(context);
     // Container que envolve o calendário, aplicando cor de fundo e bordas arredondadas.
     return Container(
       decoration: BoxDecoration(
-        color: CustomColors.card,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(15),
       ),
       child: TableCalendar(
@@ -502,51 +502,47 @@ class _HomeScreenState extends State<HomeScreen> {
           formatButtonVisible: false,
           titleCentered: true,
           titleTextStyle: GoogleFonts.lexend(
-            color: CustomColors.textDark,
+            color: colors.text,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
-          leftChevronIcon: const Icon(
+          leftChevronIcon: Icon(
             Icons.arrow_back_ios,
-            color: CustomColors.textDark,
+            color: colors.text,
             size: 16,
           ),
-          rightChevronIcon: const Icon(
+          rightChevronIcon: Icon(
             Icons.arrow_forward_ios,
-            color: CustomColors.textDark,
+            color: colors.text,
             size: 16,
           ),
         ),
         // Estilização dos dias do calendário (dias normais, fim de semana, dia selecionado, dia atual).
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
-          defaultTextStyle: TextStyle(
-            color: CustomColors.textDark.withAlpha((255 * 0.7).round()),
-          ),
-          weekendTextStyle: TextStyle(
-            color: CustomColors.textDark.withAlpha((255 * 0.7).round()),
-          ),
+          defaultTextStyle: TextStyle(color: colors.text.withOpacity(0.7)),
+          weekendTextStyle: TextStyle(color: colors.text.withOpacity(0.7)),
           todayDecoration: const BoxDecoration(
             color: Colors.transparent,
             shape: BoxShape.circle,
           ),
-          todayTextStyle: const TextStyle(
-            color: CustomColors.textDark,
+          todayTextStyle: TextStyle(
+            color: colors.text,
             fontWeight: FontWeight.bold,
           ),
           selectedDecoration: const BoxDecoration(
-            color: CustomColors.primary,
+            color: AppColors.primary,
             shape: BoxShape.circle,
           ),
-          selectedTextStyle: const TextStyle(
-            color: CustomColors.textDark,
+          selectedTextStyle: TextStyle(
+            color: colors.text,
             fontWeight: FontWeight.bold,
           ),
         ),
         // Estilização dos nomes dos dias da semana (Seg, Ter, Qua...).
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(color: CustomColors.textDark),
-          weekendStyle: TextStyle(color: CustomColors.textDark),
+        daysOfWeekStyle: DaysOfWeekStyle(
+          weekdayStyle: TextStyle(color: colors.text),
+          weekendStyle: TextStyle(color: colors.text),
         ),
         // `calendarBuilders` permite construir widgets customizados para dias específicos.
         calendarBuilders: CalendarBuilders(
@@ -556,13 +552,13 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(4.0),
                 decoration: const BoxDecoration(
-                  color: CustomColors.primary,
+                  color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
                 // Exibe um ícone de corrida no dia de hoje.
-                child: const Icon(
+                child: Icon(
                   Icons.directions_run,
-                  color: CustomColors.tertiary,
+                  color: AppColors.dark().background,
                   size: 18,
                 ),
               ),

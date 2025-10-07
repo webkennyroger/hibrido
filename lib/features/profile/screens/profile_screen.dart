@@ -1,286 +1,322 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui'; // <--- NOVO: Import necessário para usar o ImageFilter.blur
+import 'package:hibrido/features/profile/models/user_model.dart';
+import 'package:hibrido/features/profile/screens/edit_profile_screen.dart';
+import 'package:hibrido/features/activity/screens/activity_screen.dart';
+import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
+import 'package:hibrido/features/settings/screens/account_settings_screen.dart';
+// Certifique-se de que este caminho está correto
+import 'package:hibrido/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/custom_colors.dart';
 
-class ProfileScreen extends StatelessWidget {
+// Definindo um enum para as opções de navegação na parte inferior,
+// como na imagem (Atividades, Conquistas, etc.)
+enum ProfileOption { activities, achievements, gear, settings }
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    // NOVO: Consome os dados do UserProvider
+    final userProvider = Provider.of<UserProvider>(context);
+    final user = userProvider.user;
+
+    // Usaremos a cor terciária (0xFF1E1E1E) como fundo da tela
     return Scaffold(
-      backgroundColor: CustomColors.quaternary,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Barra de navegação do topo
+      backgroundColor: colors.background,
+      // NOVO: Usando CustomScrollView para um controle mais fino do scroll
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.transparent,
+            expandedHeight: 350.0, // Altura do cabeçalho expandido
+            pinned: true,
+            automaticallyImplyLeading: false, // Remove o botão de voltar padrão
+            flexibleSpace: FlexibleSpaceBar(
+              background: _buildProfileHeader(context, user),
+            ),
+          ),
+          // O conteúdo restante da tela é colocado em um SliverList.
+          SliverList(
+            delegate: SliverChildListDelegate([
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20.0,
-                  vertical: 10.0,
+                  horizontal: 24,
+                  vertical: 16,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.black,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
+                    _buildOptionCard(
+                      label: 'Minhas Atividades',
+                      icon: Icons.directions_run_rounded,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ActivityScreen(),
+                          ),
+                        );
+                      },
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_note, color: Colors.black),
-                      onPressed: () {
-                        // Ação do botão de edição
+                    _buildOptionCard(
+                      label: 'Conquistas',
+                      icon: Icons.emoji_events_outlined,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChallengesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(
+                      color: Colors.white12,
+                      height: 32,
+                      thickness: 1,
+                    ),
+                    _buildOptionCard(
+                      label: 'Configurações',
+                      icon: Icons.settings_outlined,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AccountSettingsScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
-
-              // Imagem e nome do perfil
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: CustomColors.primary, // Cor de fundo do avatar
-                child: CircleAvatar(
-                  radius: 47,
-                  backgroundImage: NetworkImage(
-                    'https://i.ibb.co/L8Gj18j/avatar.png',
-                  ), // Imagem de placeholder
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Joseph_7',
-                style: GoogleFonts.lexend(
-                  color: CustomColors.textDark,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Seção de Total de Pontos e Records
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20.0),
-                padding: const EdgeInsets.all(15.0),
-                decoration: BoxDecoration(
-                  color: CustomColors.tertiary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        Text(
-                          'Total Points',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textLight,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          '35766',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textLight,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(height: 50, width: 1, color: CustomColors.card),
-                    Column(
-                      children: [
-                        Text(
-                          'Total Records',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textLight,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          '35766',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textLight,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Barra de progresso do nível
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Level',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textDark,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          '35000 / 50000 Pts',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textDark,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    LinearProgressIndicator(
-                      value: 35000 / 50000,
-                      backgroundColor: CustomColors.card.withAlpha(
-                        (255 * 0.5).round(),
-                      ),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        CustomColors.primary,
-                      ),
-                      minHeight: 10,
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '10',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textDark,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          '11',
-                          style: GoogleFonts.lexend(
-                            color: CustomColors.textDark,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Seção de Registros
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Your Records',
-                      style: GoogleFonts.lexend(
-                        color: CustomColors.textDark,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        'see all',
-                        style: GoogleFonts.lexend(
-                          color: CustomColors.secondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Lista de Registros (Cartões)
-              _buildRecordCard(
-                'Dec-Half-Marathon',
-                '+2550 pts',
-                '1st',
-                'https://i.ibb.co/3Wf4Q4X/marathon.jpg',
-                context,
-              ),
-              _buildRecordCard(
-                'Running challenge',
-                '+1350 pts',
-                '2nd',
-                'https://i.ibb.co/n6v98Vq/running.jpg',
-                context,
-              ),
-              _buildRecordCard(
-                'Nov-jogging challenge',
-                '+1000 pts',
-                '3rd',
-                'https://i.ibb.co/tBf3yXv/jogging.jpg',
-                context,
-              ),
-            ],
+            ]),
           ),
+        ],
+      ),
+    );
+  }
+
+  // --- Widgets Auxiliares ---
+
+  // NOVO: Renderiza o item de estatística usando texto branco para o rótulo
+  Widget _buildStatItem(String value, String label) {
+    final colors = AppColors.of(context);
+
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.lexend(
+            color: AppColors.primary, // Cor Primária (Verde) para o valor
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.lexend(
+            color: colors.textSecondary, // Alterado para cinza escuro
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // NOVO: Card de opção de navegação
+  Widget _buildOptionCard({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final colors = AppColors.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: colors.text, size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.lexend(
+                  color: colors.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: colors.text, size: 18),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildRecordCard(
-    String title,
-    String pts,
-    String rank,
-    String imageUrl,
-    BuildContext context,
-  ) {
+  // CORRIGIDO: O Header do Perfil com Imagem de Fundo Desfocada
+  Widget _buildProfileHeader(BuildContext context, UserModel user) {
+    final colors = AppColors.of(context);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-      padding: const EdgeInsets.all(15.0),
-      decoration: BoxDecoration(
-        color: CustomColors.quinary,
-        borderRadius: BorderRadius.circular(15),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
-      child: Row(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          CircleAvatar(radius: 30, backgroundImage: NetworkImage(imageUrl)),
-          const SizedBox(width: 15),
-          Expanded(
+          // 1. Imagem de Fundo
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(30),
+            ),
+            child: Image(
+              image: user.profileImage,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              // Adiciona uma cor de preenchimento para garantir que não haja transparência
+              colorBlendMode: BlendMode.darken,
+            ),
+          ),
+
+          // 2. Efeito de Desfoque (Blur)
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(30),
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 8.0,
+                  sigmaY: 8.0,
+                ), // Aplica o Blur
+                child: Container(
+                  // Overlay escuro semi-transparente para melhorar a legibilidade
+                  color: colors.background.withOpacity(0.4),
+                ),
+              ),
+            ),
+          ),
+
+          // 3. Conteúdo do Perfil (Botões, Avatar, Nome, Stats)
+          Padding(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: MediaQuery.of(context).padding.top + 16,
+              bottom: 24, // Adiciona padding na parte inferior do cabeçalho
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // BOTÃO DE VOLTAR E ÍCONE DE CONFIGURAÇÃO/EDIÇÃO
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        // Navega para a tela de edição e espera um resultado
+                        final updatedUser = await Navigator.push<UserModel>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditProfileScreen(user: user),
+                          ),
+                        );
+
+                        if (updatedUser != null) {
+                          // NOVO: Atualiza o usuário através do provider
+                          context.read<UserProvider>().updateUser(updatedUser);
+                        }
+                      },
+                      child: const Icon(
+                        Icons.edit_note,
+                        color: Colors
+                            .white, // Mantido branco para contraste com o fundo escurecido
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // IMAGEM E NOME
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage: user.profileImage, // Usa a mesma imagem
+                  backgroundColor: AppColors.primary,
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  title,
+                  user.name, // Nome do usuário vindo do estado
                   style: GoogleFonts.lexend(
-                    color: CustomColors.textDark,
-                    fontSize: 16,
+                    color: Colors.white,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
-                  pts,
+                  user.location, // Localização vinda do estado
                   style: GoogleFonts.lexend(
-                    color: CustomColors.textDark,
+                    color: Colors.white.withOpacity(0.8),
                     fontSize: 14,
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // ESTATÍSTICAS
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(child: _buildStatItem('350', 'Atividades')),
+                        VerticalDivider(
+                          color: colors.text.withOpacity(0.12),
+                          thickness: 1,
+                          indent: 10, // Adiciona espaçamento vertical
+                          endIndent: 10,
+                        ),
+                        Expanded(child: _buildStatItem('2.5K', 'Km Rodados')),
+                        VerticalDivider(
+                          color: colors.text.withOpacity(0.12),
+                          thickness: 1,
+                          indent: 10,
+                          endIndent: 10,
+                        ),
+                        Expanded(child: _buildStatItem('120', 'Conquistas')),
+                      ],
+                    ),
+                  ),
+                ),
               ],
-            ),
-          ),
-          Text(
-            rank,
-            style: GoogleFonts.lexend(
-              color: CustomColors.primary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
             ),
           ),
         ],

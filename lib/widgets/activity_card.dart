@@ -6,6 +6,8 @@ import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/activity/screens/comments_screen.dart';
 import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:hibrido/core/utils/map_utils.dart';
 
 class ActivityCard extends StatefulWidget {
@@ -47,8 +49,9 @@ class _ActivityCardState extends State<ActivityCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Card(
-      color: CustomColors.quaternary,
+      color: colors.surface,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -66,7 +69,7 @@ class _ActivityCardState extends State<ActivityCard> {
               style: GoogleFonts.lexend(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: CustomColors.textDark,
+                color: colors.text,
               ),
             ),
             const SizedBox(height: 8),
@@ -84,13 +87,26 @@ class _ActivityCardState extends State<ActivityCard> {
     );
   }
 
+  // Mapeia o esporte para o ícone correspondente.
+  IconData _getSportIcon(String sport) {
+    switch (sport.toLowerCase()) {
+      case 'pedalada':
+        return Icons.directions_bike;
+      case 'caminhada':
+        return Icons.directions_walk;
+      case 'corrida':
+      default:
+        return Icons.directions_run;
+    }
+  }
+
   Widget _buildHeader(BuildContext context) {
+    final colors = AppColors.of(context);
+    final user = context.watch<UserProvider>().user;
+
     return Row(
       children: [
-        const CircleAvatar(
-          radius: 20,
-          backgroundImage: NetworkImage('https://i.ibb.co/L8Gj18j/avatar.png'),
-        ),
+        CircleAvatar(radius: 20, backgroundImage: user.profileImage),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -100,21 +116,21 @@ class _ActivityCardState extends State<ActivityCard> {
                 widget.activityData.userName,
                 style: GoogleFonts.lexend(
                   fontWeight: FontWeight.bold,
-                  color: CustomColors.textDark,
+                  color: colors.text,
                 ),
               ),
               Row(
                 children: [
                   Icon(
-                    Icons.directions_run,
-                    color: CustomColors.primary,
+                    _getSportIcon(widget.activityData.sport),
+                    color: AppColors.primary,
                     size: 16,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${widget.activityData.runTime} - ${widget.activityData.location}',
                     style: GoogleFonts.lexend(
-                      color: Colors.grey.shade600,
+                      color: colors.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -195,7 +211,7 @@ class _ActivityCardState extends State<ActivityCard> {
               child: Text('Excluir atividade'),
             ),
           ],
-          child: const Icon(Icons.more_vert, color: CustomColors.textDark),
+          child: Icon(Icons.more_vert, color: colors.text),
         ),
       ],
     );
@@ -219,7 +235,7 @@ class _ActivityCardState extends State<ActivityCard> {
             Polyline(
               polylineId: const PolylineId('route'),
               points: widget.activityData.routePoints,
-              color: CustomColors.primary,
+              color: AppColors.primary,
               width: 4,
             ),
           },
@@ -265,6 +281,8 @@ class _ActivityCardState extends State<ActivityCard> {
   }
 
   Widget _buildStatItem(String label, String value) {
+    final colors = AppColors.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -276,7 +294,7 @@ class _ActivityCardState extends State<ActivityCard> {
           value,
           style: GoogleFonts.lexend(
             fontWeight: FontWeight.w600,
-            color: CustomColors.textDark,
+            color: colors.text,
             fontSize: 16,
           ),
         ),
@@ -317,23 +335,29 @@ class _ActivityCardState extends State<ActivityCard> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _actionButton(Icons.comment_outlined, _commentsCount, () async {
-            // Navega para a tela de comentários e aguarda um resultado
-            final result = await Navigator.push<List<String>>(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    CommentsScreen(activityData: widget.activityData),
-              ),
-            );
+          child: _actionButton(
+            Icons.comment_outlined,
+            _commentsCount,
+            () async {
+              // Navega para a tela de comentários e aguarda um resultado
+              final result = await Navigator.push<List<String>>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      CommentsScreen(activityData: widget.activityData),
+                ),
+              );
 
-            // Se a tela de comentários retornou uma nova lista, atualiza o estado
-            if (result != null) {
-              setState(() {
-                _commentsCount = result.length;
-              });
-            }
-          }),
+              // Se a tela de comentários retornou uma nova lista, atualiza o estado
+              if (result != null) {
+                setState(() {
+                  _commentsCount = result.length;
+                });
+              }
+            },
+            // Adiciona um indicador se houver parceiros marcados
+            badgeCount: widget.activityData.taggedPartnerIds.length,
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -362,7 +386,10 @@ class _ActivityCardState extends State<ActivityCard> {
     int count,
     VoidCallback onPressed, {
     bool isLiked = false,
+    int badgeCount = 0,
   }) {
+    final colors = AppColors.of(context);
+
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(12),
@@ -371,26 +398,47 @@ class _ActivityCardState extends State<ActivityCard> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isLiked ? CustomColors.primary : Colors.grey.shade400,
+            color: isLiked ? AppColors.primary : colors.text.withOpacity(0.3),
             width: 1.5,
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Icon(
-              icon,
-              color: isLiked ? CustomColors.primary : Colors.grey.shade700,
-              size: 22,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isLiked ? AppColors.primary : colors.textSecondary,
+                  size: 22,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  count.toString(),
+                  style: GoogleFonts.lexend(
+                    color: isLiked ? AppColors.primary : colors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
-            Text(
-              count.toString(),
-              style: GoogleFonts.lexend(
-                color: isLiked ? CustomColors.primary : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
+            if (badgeCount > 0)
+              Positioned(
+                top: -8,
+                right: -8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '+$badgeCount',
+                    style: const TextStyle(color: Colors.black, fontSize: 10),
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),

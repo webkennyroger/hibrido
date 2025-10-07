@@ -30,17 +30,18 @@ class SportSelectionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final bool isSelected = selectedSport == option;
 
     // Define a cor de fundo
     final Color backgroundColor = isSelected
         ? (isLarge
-              ? CustomColors
+              ? AppColors
                     .primary // Verde sólido para o botão grande
-              : CustomColors.primary.withAlpha(
+              : AppColors.primary.withAlpha(
                   (255 * 0.6).round(),
                 )) // Verde translúcido para o pequeno
-        : (isLarge ? CustomColors.secondary : CustomColors.tertiary);
+        : (isLarge ? colors.background : AppColors.dark().background);
 
     return GestureDetector(
       onTap: onTap,
@@ -67,13 +68,13 @@ class SportSelectionButton extends StatelessWidget {
                     iconPath,
                     colorFilter: ColorFilter.mode(
                       useDarkMode
-                          ? CustomColors
-                                .tertiary // Ícone sempre preto no modo escuro
+                          ? AppColors.dark()
+                                .background // Ícone sempre preto no modo escuro
                           : (isSelected
                                 ? (isLarge
-                                      ? CustomColors.tertiary
-                                      : CustomColors.primary)
-                                : CustomColors.tertiary),
+                                      ? AppColors.dark().background
+                                      : AppColors.primary)
+                                : AppColors.dark().background),
                       BlendMode.srcIn,
                     ),
                     width: 35,
@@ -83,8 +84,8 @@ class SportSelectionButton extends StatelessWidget {
                       return Icon(
                         fallbackIcon,
                         color: isSelected
-                            ? CustomColors.primary
-                            : CustomColors.tertiary,
+                            ? AppColors.primary
+                            : AppColors.dark().background,
                         size: 35,
                       );
                     },
@@ -99,11 +100,11 @@ class SportSelectionButton extends StatelessWidget {
                   child: Icon(
                     Icons.check_circle, // Usa sempre o ícone com círculo
                     color: useDarkMode
-                        ? CustomColors
-                              .tertiary // Check preto se dark mode
+                        ? AppColors.dark()
+                              .background // Check preto se dark mode
                         : (isLarge
-                              ? CustomColors.tertiary
-                              : CustomColors.primary),
+                              ? AppColors.dark().background
+                              : AppColors.primary),
                     size: 20, // Usa sempre o mesmo tamanho
                   ),
                 ),
@@ -114,7 +115,7 @@ class SportSelectionButton extends StatelessWidget {
             Text(
               label,
               style: GoogleFonts.lexend(
-                color: isSelected ? CustomColors.primary : Colors.white,
+                color: isSelected ? AppColors.primary : Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),

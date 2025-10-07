@@ -10,8 +10,9 @@ class ChallengesScreen extends StatelessWidget {
   const ChallengesScreen({super.key});
 
   /// Constrói todo o conteúdo para a aba 'Conquistas'.
-  Widget _buildActiveContent() {
+  Widget _buildActiveContent(BuildContext context) {
     return SingleChildScrollView(
+      // O contexto é necessário para obter as cores do tema
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -21,7 +22,7 @@ class ChallengesScreen extends StatelessWidget {
             child: Text(
               'Conquistas (4)',
               style: GoogleFonts.lexend(
-                color: CustomColors.textLight,
+                color: AppColors.of(context).text,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -68,7 +69,7 @@ class ChallengesScreen extends StatelessWidget {
             child: Text(
               'Recordes pessoais de corridas',
               style: GoogleFonts.lexend(
-                color: CustomColors.textLight,
+                color: AppColors.of(context).text,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -131,7 +132,7 @@ class ChallengesScreen extends StatelessWidget {
                 Text(
                   'Recordes por atividade - Corrida',
                   style: GoogleFonts.lexend(
-                    color: CustomColors.textLight,
+                    color: AppColors.of(context).text,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -169,7 +170,7 @@ class ChallengesScreen extends StatelessWidget {
   }
 
   /// Constrói todo o conteúdo para a aba 'Desafios'.
-  Widget _buildChallengesContent() {
+  Widget _buildChallengesContent(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,7 +212,7 @@ class ChallengesScreen extends StatelessWidget {
             child: Text(
               'Desafios Ativos',
               style: GoogleFonts.lexend(
-                color: CustomColors.textLight,
+                color: AppColors.of(context).text,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -266,33 +267,29 @@ class ChallengesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     // DefaultTabController gerencia o estado das abas (Conquistas, Desafios, Clubs).
     return DefaultTabController(
       length: 3,
       // Scaffold é a estrutura principal da tela.
       child: Scaffold(
-        backgroundColor:
-            CustomColors.tertiary, // Alterado para fundo escuro padrão
+        backgroundColor: colors.background, // Fundo dinâmico
         // AppBar contém o título e a barra de abas.
         appBar: AppBar(
           title: Text(
             'Desafios e Conquistas',
             style: GoogleFonts.lexend(
-              color: CustomColors
-                  .textLight, // Mantém o texto claro no appbar escuro
+              color: colors.text, // Texto dinâmico
               fontWeight: FontWeight.bold,
             ),
           ),
-          backgroundColor:
-              CustomColors.tertiary, // Alterado para fundo escuro padrão
+          backgroundColor: colors.background, // Fundo dinâmico
           elevation: 0,
           bottom: TabBar(
             // Estilização da barra de abas.
-            indicatorColor: CustomColors.primary,
-            labelColor: CustomColors.textLight,
-            unselectedLabelColor: CustomColors.textLight.withAlpha(
-              (255 * 0.6).round(),
-            ),
+            indicatorColor: AppColors.primary,
+            labelColor: colors.text,
+            unselectedLabelColor: colors.text.withOpacity(0.6),
             tabs: const [
               Tab(text: 'Conquistas'),
               Tab(text: 'Desafios'),
@@ -303,8 +300,8 @@ class ChallengesScreen extends StatelessWidget {
         // TabBarView exibe o conteúdo correspondente à aba selecionada.
         body: TabBarView(
           children: [
-            _buildActiveContent(), // Conteúdo de Conquistas
-            _buildChallengesContent(), // Conteúdo de Desafios
+            _buildActiveContent(context), // Conteúdo de Conquistas
+            _buildChallengesContent(context), // Conteúdo de Desafios
             _buildClubsContent(),
           ],
         ),

@@ -20,9 +20,11 @@ class ChallengeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     // Card é a base do widget, com sombra e bordas arredondadas.
     return Card(
-      color: CustomColors.card,
+      color: colors.surface,
       margin: const EdgeInsets.all(8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
@@ -31,13 +33,13 @@ class ChallengeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Ícone que representa o desafio.
-            Icon(icon, color: CustomColors.primary, size: 30),
+            Icon(icon, color: AppColors.primary, size: 30),
             const Spacer(),
             // Título do desafio.
             Text(
               title,
               style: GoogleFonts.lexend(
-                color: CustomColors.textLight,
+                color: colors.text,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
@@ -49,7 +51,7 @@ class ChallengeCard extends StatelessWidget {
             Text(
               date,
               style: GoogleFonts.lexend(
-                color: CustomColors.textLight.withAlpha((255 * 0.7).round()),
+                color: colors.text.withOpacity(0.7),
                 fontSize: 10,
               ),
             ),
@@ -63,11 +65,9 @@ class ChallengeCard extends StatelessWidget {
                   // Lógica para entrar ou sair do desafio
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isJoined
-                      ? Colors.transparent
-                      : CustomColors.primary,
+                  backgroundColor: isJoined ? Colors.transparent : AppColors.primary,
                   side: isJoined
-                      ? BorderSide(color: CustomColors.primary, width: 1)
+                      ? BorderSide(color: AppColors.primary, width: 1)
                       : BorderSide.none,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -77,9 +77,8 @@ class ChallengeCard extends StatelessWidget {
                 child: Text(
                   isJoined ? 'Ingressou' : 'Ingressar',
                   style: GoogleFonts.lexend(
-                    color: isJoined
-                        ? CustomColors.primary
-                        : CustomColors.textDark,
+                    color:
+                        isJoined ? AppColors.primary : AppColors.dark().background,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),

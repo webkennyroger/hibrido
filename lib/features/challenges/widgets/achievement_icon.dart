@@ -11,6 +11,8 @@ class AchievementIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Column(
       children: [
         // Container que define a moldura do ícone (quadrado com bordas arredondadas).
@@ -20,8 +22,8 @@ class AchievementIcon extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.rectangle,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.grey.shade300),
-            color: Colors.white,
+            border: Border.all(color: colors.text.withOpacity(0.12)),
+            color: colors.surface,
           ),
           // Padding para a imagem dentro da moldura.
           child: Padding(
@@ -47,7 +49,7 @@ class AchievementIcon extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: GoogleFonts.lexend(
-            color: CustomColors.textLight,
+            color: colors.text,
             fontWeight: FontWeight.w600,
             fontSize: 12,
           ),
@@ -57,7 +59,7 @@ class AchievementIcon extends StatelessWidget {
           subtitle,
           textAlign: TextAlign.center,
           style: GoogleFonts.lexend(
-            color: CustomColors.textLight.withAlpha((255 * 0.7).round()),
+            color: colors.text.withOpacity(0.7),
             fontSize: 10,
           ),
         ),

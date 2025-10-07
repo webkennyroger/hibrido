@@ -6,13 +6,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:hibrido/features/settings/screens/account_settings_screen.dart';
 // Certifique-se de que o caminho para o seu arquivo de cores está correto
-import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/core/theme/custom_colors.dart'; // Agora usa AppColors
 // Certifique-se de que os caminhos para os arquivos de dados e tela estão corretos
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart'; // Assuming this is correct
 import 'package:hibrido/features/map/screens/sport_selection_button.dart'; // Corrected import path
+import 'package:hibrido/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:hibrido/services/spotify_service.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 
@@ -408,13 +411,17 @@ class _MapScreenState extends State<MapScreen> {
     _timer?.cancel();
     _positionStreamSubscription?.cancel();
 
+    // NOVO: Obtém os dados do usuário atual a partir do provider.
+    final user = context.read<UserProvider>().user;
+
     // 2. Cria um objeto ActivityData TEMPORÁRIO com os dados finais.
     final tempActivityData = ActivityData(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userName: 'Kenny',
+      userName: user.name,
       activityTitle: _getSportLabel(_selectedSport),
+      sport: _getSportLabel(_selectedSport),
       runTime: 'Manhã de Quarta-feira',
-      location: 'São Paulo, SP',
+      location: user.location,
       distanceInMeters: _totalDistanceInMeters,
       duration: _stopwatch.elapsed,
       routePoints: List.from(_routePoints),
@@ -432,11 +439,7 @@ class _MapScreenState extends State<MapScreen> {
         fullscreenDialog: true,
         builder: (sheetContext) => FinishedConfirmationSheet(
           activityData: tempActivityData,
-          onSaveAndNavigate: (newTitle) async {
-            final finalActivityData = tempActivityData.copyWith(
-              activityTitle: newTitle,
-            );
-
+          onSaveAndNavigate: (finalActivityData) async {
             await _saveActivity(finalActivityData);
 
             // Usa o contexto do sheet para fechar a si mesmo
@@ -592,7 +595,7 @@ class _MapScreenState extends State<MapScreen> {
               Polyline(
                 polylineId: const PolylineId('route'),
                 points: _routePoints,
-                color: CustomColors.primary,
+                color: AppColors.primary,
                 width: 5,
               ),
             );
@@ -764,8 +767,10 @@ class _MapScreenState extends State<MapScreen> {
   @override
   /// Constrói a interface gráfica da tela.
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Scaffold(
-      backgroundColor: CustomColors.quaternary,
+      backgroundColor: colors.surface,
       body: Stack(
         children: [
           // Exibe um indicador de progresso enquanto a localização inicial não é obtida.
@@ -813,19 +818,21 @@ class _MapScreenState extends State<MapScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildTopIcon(
-                  child: const Icon(
-                    Icons.route_outlined,
-                    color: CustomColors.textDark,
-                  ),
-                  onTap:
-                      () {}, // Ação para a tela de rotas pode ser adicionada aqui
+                  context,
+                  child: Icon(Icons.arrow_back_ios_new, color: colors.text),
+                  onTap: () => Navigator.of(context).pop(),
                 ),
                 _buildTopIcon(
-                  child: const Icon(
-                    Icons.settings,
-                    color: CustomColors.textDark,
-                  ),
-                  onTap: () {},
+                  context,
+                  child: Icon(Icons.settings, color: colors.text),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AccountSettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -839,6 +846,7 @@ class _MapScreenState extends State<MapScreen> {
               child: Column(
                 children: [
                   _buildMapControlButton(
+                    context,
                     icon: Icons.layers_outlined,
                     onPressed: () {
                       _toggleMapOptions();
@@ -846,11 +854,13 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                   const SizedBox(height: 10),
                   _buildMapControlButton(
+                    context,
                     icon: Icons.threed_rotation,
                     onPressed: _toggle3DView,
                   ),
                   const SizedBox(height: 10),
                   _buildMapControlButton(
+                    context,
                     icon: Icons.my_location,
                     onPressed: _centerOnLocation,
                   ),
@@ -1026,7 +1036,7 @@ class _MapScreenState extends State<MapScreen> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isSelected
-                          ? CustomColors.primary
+                          ? AppColors.primary
                           : Colors.transparent,
                       width: 2,
                     ),
@@ -1271,7 +1281,7 @@ class _MapScreenState extends State<MapScreen> {
                                 : 0.0,
                             backgroundColor: Colors.white.withOpacity(0.2),
                             valueColor: const AlwaysStoppedAnimation<Color>(
-                              CustomColors.primary,
+                              AppColors.primary,
                             ),
                           ),
                         const SizedBox(height: 8),
@@ -1330,14 +1340,14 @@ class _MapScreenState extends State<MapScreen> {
         IconButton(
           icon: const Icon(
             Icons.keyboard_arrow_down,
-            color: CustomColors.primary,
+            color: AppColors.primary,
             size: 28,
           ),
           onPressed: () => setState(() => _isPlayerVisible = false),
         ),
         // Botão para FECHAR (esconde o player e para a música)
         IconButton(
-          icon: const Icon(Icons.close, color: CustomColors.primary, size: 24),
+          icon: const Icon(Icons.close, color: AppColors.primary, size: 24),
           onPressed: () {
             _spotifyService.pause();
             setState(() => _isPlayerVisible = false);
@@ -1369,13 +1379,18 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// Constrói um ícone circular com sombra para os botões superiores.
-  Widget _buildTopIcon({required Widget child, required VoidCallback onTap}) {
+  Widget _buildTopIcon(
+    BuildContext context, {
+    required Widget child,
+    required VoidCallback onTap,
+  }) {
+    final colors = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -1391,6 +1406,8 @@ class _MapScreenState extends State<MapScreen> {
 
   /// Constrói o botão que exibe o status do GPS e abre as configurações de localização ao ser tocado.
   Widget _buildGpsButton() {
+    final colors = AppColors.of(context);
+
     return GestureDetector(
       onTap: () async {
         await Geolocator.openLocationSettings();
@@ -1399,7 +1416,7 @@ class _MapScreenState extends State<MapScreen> {
         width: 120,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: CustomColors.tertiary, // Fundo preto
+          color: colors.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -1414,14 +1431,14 @@ class _MapScreenState extends State<MapScreen> {
           children: [
             Icon(
               Icons.location_on,
-              color: _isGpsOn ? CustomColors.primary : Colors.red,
+              color: _isGpsOn ? AppColors.primary : AppColors.error,
               size: 20,
             ),
             const SizedBox(width: 5),
             Text(
               _isGpsOn ? 'GPS - ON' : 'GPS - OFF',
               style: GoogleFonts.lexend(
-                color: CustomColors.textLight, // Texto branco
+                color: colors.text,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -1433,16 +1450,19 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// Constrói um botão de controle de mapa genérico (circular, branco com sombra).
-  Widget _buildMapControlButton({
+  Widget _buildMapControlButton(
+    BuildContext context, {
     required IconData icon,
     required VoidCallback onPressed,
   }) {
+    final colors = AppColors.of(context);
+
     return GestureDetector(
       onTap: onPressed,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -1451,7 +1471,7 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ],
         ),
-        child: Icon(icon, color: CustomColors.textDark, size: 24),
+        child: Icon(icon, color: colors.text, size: 24),
       ),
     );
   }
@@ -1483,16 +1503,19 @@ class _NotStartedControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildActionButton(
-          Icons.music_note_outlined,
-          CustomColors.tertiary,
+          context, // Corrigido
+          icon: Icons.music_note_outlined,
+          color: AppColors.dark().background,
           onTap: onMusic,
         ),
-        _buildStartButton(),
+        _buildStartButton(context),
         SportSelectionButton(
           iconPath: getSportIconPath(selectedSport),
           label: getSportLabel(selectedSport),
@@ -1507,7 +1530,14 @@ class _NotStartedControls extends StatelessWidget {
   }
 
   /// Constrói um botão de ação circular (ex: botão de música).
-  Widget _buildActionButton(IconData icon, Color color, {VoidCallback? onTap}) {
+  Widget _buildActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    final colors = AppColors.of(context);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1515,7 +1545,7 @@ class _NotStartedControls extends StatelessWidget {
         height: 60,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: CustomColors.secondary,
+          color: colors.background,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha((255 * 0.1).round()),
@@ -1530,7 +1560,7 @@ class _NotStartedControls extends StatelessWidget {
   }
 
   /// Constrói o botão grande "COMEÇAR".
-  Widget _buildStartButton() {
+  Widget _buildStartButton(BuildContext context) {
     return GestureDetector(
       onTap: onStart,
       child: Container(
@@ -1538,10 +1568,10 @@ class _NotStartedControls extends StatelessWidget {
         height: 110,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: CustomColors.primary,
+          color: AppColors.primary,
           boxShadow: [
             BoxShadow(
-              color: CustomColors.primary.withAlpha((255 * 0.4).round()),
+              color: AppColors.primary.withAlpha((255 * 0.4).round()),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -1551,7 +1581,7 @@ class _NotStartedControls extends StatelessWidget {
           child: Text(
             'COMEÇAR',
             style: GoogleFonts.lexend(
-              color: CustomColors.tertiary,
+              color: AppColors.dark().background,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -1564,6 +1594,7 @@ class _NotStartedControls extends StatelessWidget {
 
 /// Constrói um botão de ação para os controles de Pausa (Retomar/Concluir).
 Widget _buildActionButton(
+  BuildContext context,
   IconData icon,
   Color color, {
   VoidCallback? onTap,
@@ -1571,6 +1602,8 @@ Widget _buildActionButton(
   Color? backgroundColor,
   String? text,
 }) {
+  final colors = AppColors.of(context);
+
   return GestureDetector(
     onTap: onTap,
     child: Container(
@@ -1586,12 +1619,12 @@ Widget _buildActionButton(
         borderRadius: text != null ? BorderRadius.circular(35) : null,
         color:
             backgroundColor ??
-            (isPrimary ? CustomColors.primary : CustomColors.secondary),
+            (isPrimary ? AppColors.primary : colors.background),
         boxShadow: [
           BoxShadow(
             color:
                 (backgroundColor ??
-                        (isPrimary ? CustomColors.primary : Colors.black))
+                        (isPrimary ? AppColors.primary : Colors.black))
                     .withOpacity(0.4),
             blurRadius: 10,
             offset: const Offset(0, 5),
@@ -1637,11 +1670,14 @@ Widget _buildActionButton(
 
 /// Constrói um botão de ação circular pequeno (usado no estado Pausado)
 Widget _buildSmallActionButton(
+  BuildContext context,
   IconData icon,
   Color color, {
   VoidCallback? onTap,
   bool isHighlighted = false,
 }) {
+  final colors = AppColors.of(context);
+
   return GestureDetector(
     onTap: onTap,
     child: Container(
@@ -1649,11 +1685,11 @@ Widget _buildSmallActionButton(
       height: 60,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isHighlighted ? CustomColors.primary : CustomColors.secondary,
+        color: isHighlighted ? AppColors.primary : colors.background,
         boxShadow: [
           BoxShadow(
             color: isHighlighted
-                ? CustomColors.primary.withAlpha(100)
+                ? AppColors.primary.withAlpha(100)
                 : Colors.black.withAlpha(50),
             blurRadius: 10,
             offset: const Offset(0, 5),
@@ -1662,7 +1698,7 @@ Widget _buildSmallActionButton(
       ),
       child: Icon(
         icon,
-        color: isHighlighted ? CustomColors.tertiary : color,
+        color: isHighlighted ? AppColors.dark().background : color,
         size: 30,
       ),
     ),
@@ -1670,7 +1706,12 @@ Widget _buildSmallActionButton(
 }
 
 /// Constrói um botão de ação que é apenas um ícone clicável, sem fundo.
-Widget _buildIconOnlyButton(IconData icon, Color color, {VoidCallback? onTap}) {
+Widget _buildIconOnlyButton(
+  BuildContext context,
+  IconData icon,
+  Color color, {
+  VoidCallback? onTap,
+}) {
   return GestureDetector(
     onTap: onTap,
     child: Icon(icon, color: color, size: 30),
@@ -1695,18 +1736,20 @@ class _PausedControls extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildActionButton(
+          context,
           Icons.play_arrow,
-          CustomColors.tertiary,
+          AppColors.dark().background,
           onTap: onResume,
           isPrimary: true,
           text: showText ? 'RETORNAR' : null,
         ),
         const SizedBox(width: 15),
         _buildActionButton(
+          context,
           Icons.stop,
           Colors.white,
           onTap: onStop,
-          backgroundColor: CustomColors.quinary,
+          backgroundColor: AppColors.error,
           text: showText ? 'CONCLUIR' : null,
         ),
       ],
@@ -1755,6 +1798,7 @@ class _ActivityStatsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     // Controlador para acessar o estado do sheet.
     final DraggableScrollableController sheetController =
         DraggableScrollableController();
@@ -1781,8 +1825,8 @@ class _ActivityStatsSheet extends StatelessWidget {
                 MediaQuery.of(context).size.height * (minHeight + 0.1);
 
             return Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF232530),
+              decoration: BoxDecoration(
+                color: colors.surface,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -1832,7 +1876,7 @@ class _ActivityStatsSheet extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
                 child: Icon(
                   Icons.keyboard_arrow_up,
-                  color: CustomColors.primary.withOpacity(0.5),
+                  color: AppColors.primary.withOpacity(0.5),
                   size: 32,
                 ),
               ),
@@ -1842,14 +1886,26 @@ class _ActivityStatsSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _buildStatColumn('DURAÇÃO', durationText, fontSize: 26),
                 _buildStatColumn(
+                  context,
+                  'DURAÇÃO',
+                  durationText,
+                  fontSize: 26,
+                ),
+                _buildStatColumn(
+                  context,
                   'DISTÂNCIA',
                   distanceInKm,
                   unit: '',
                   fontSize: 40,
                 ),
-                _buildStatColumn('RITMO', averagePace, unit: '', fontSize: 26),
+                _buildStatColumn(
+                  context,
+                  'RITMO',
+                  averagePace,
+                  unit: '',
+                  fontSize: 26,
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -1894,7 +1950,7 @@ class _ActivityStatsSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 10.0),
               child: Icon(
                 Icons.keyboard_arrow_down,
-                color: CustomColors.primary.withOpacity(0.5),
+                color: AppColors.primary.withOpacity(0.5),
                 size: 32,
               ),
             ),
@@ -1907,6 +1963,7 @@ class _ActivityStatsSheet extends StatelessWidget {
             child: Column(
               children: [
                 _buildMainStat(
+                  context,
                   'DURAÇÃO',
                   durationText,
                   ' ',
@@ -1917,6 +1974,7 @@ class _ActivityStatsSheet extends StatelessWidget {
                 const Divider(color: Colors.white12, thickness: 1),
                 const SizedBox(height: 24),
                 _buildMainStat(
+                  context,
                   'DISTÂNCIA',
                   distanceInKm,
                   'km',
@@ -1932,6 +1990,7 @@ class _ActivityStatsSheet extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildMainStat(
+                        context,
                         'RITMO ATUAL',
                         currentPace,
                         '/km',
@@ -1948,6 +2007,7 @@ class _ActivityStatsSheet extends StatelessWidget {
                     ),
                     Expanded(
                       child: _buildMainStat(
+                        context,
                         'RITMO MÉDIO',
                         averagePace,
                         '/km',
@@ -1957,7 +2017,7 @@ class _ActivityStatsSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-                _buildCalorieStat(calories),
+                _buildCalorieStat(context, calories),
               ],
             ),
           ),
@@ -1965,7 +2025,7 @@ class _ActivityStatsSheet extends StatelessWidget {
 
           // Controles (Pause/Stop/Retomar)
           activityState == ActivityState.running
-              ? _buildPauseButton()
+              ? _buildPauseButton(context)
               // Layout expandido mostra o texto
               : Padding(
                   padding: const EdgeInsets.symmetric(
@@ -1994,13 +2054,17 @@ class _ActivityStatsSheet extends StatelessWidget {
         children: [
           // Botão Câmera
           _buildIconOnlyButton(
+            context,
             Icons.camera_alt_outlined,
-            CustomColors.primary,
+            AppColors.primary,
             onTap: onCamera,
           ),
           // Ação Principal (Pausar ou Retomar/Concluir)
           if (activityState == ActivityState.running)
-            _buildPauseButton(isSmall: true) // Usa a versão pequena do botão
+            _buildPauseButton(
+              context,
+              isSmall: true,
+            ) // Usa a versão pequena do botão
           else
             // Layout minimizado não mostra texto
             SizedBox(
@@ -2013,8 +2077,9 @@ class _ActivityStatsSheet extends StatelessWidget {
             ),
           // Botão Configurações
           _buildIconOnlyButton(
+            context,
             Icons.settings_outlined,
-            CustomColors.primary,
+            AppColors.primary,
             onTap: () => _showSettingsModal(context),
           ),
         ],
@@ -2024,6 +2089,8 @@ class _ActivityStatsSheet extends StatelessWidget {
 
   /// Mostra o modal de configurações da atividade.
   void _showSettingsModal(BuildContext context) {
+    final colors = AppColors.of(context);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF232530),
@@ -2051,7 +2118,13 @@ class _ActivityStatsSheet extends StatelessWidget {
                 true,
                 (value) {},
               ),
-              _buildSettingsOption(context, 'Modo padrão', true, (value) {}),
+              _buildSettingsOption(
+                context,
+                'Modo padrão',
+                true,
+                (value) {},
+                colors: colors,
+              ),
               _buildSettingsOption(context, 'Modo satélite', false, (value) {}),
               _buildSettingsOption(context, 'Modo híbrido', false, (value) {}),
               _buildSettingsOption(context, 'Modo noturno', false, (value) {}),
@@ -2073,21 +2146,24 @@ class _ActivityStatsSheet extends StatelessWidget {
     BuildContext context,
     String title,
     bool value,
-    Function(bool) onChanged,
-  ) {
+    Function(bool) onChanged, {
+    AppColors? colors,
+  }) {
     return CheckboxListTile(
       title: Text(title, style: const TextStyle(color: Colors.white)),
       value: value,
       onChanged: (newValue) => onChanged(newValue ?? false),
-      activeColor: CustomColors.primary,
-      checkColor: CustomColors.tertiary,
+      activeColor: AppColors.primary,
+      checkColor: AppColors.dark().background,
       controlAffinity: ListTileControlAffinity.leading,
     );
   }
 
   /// Constrói o botão grande de "Pausar".
-  Widget _buildPauseButton({bool isSmall = false}) {
-    final double size = isSmall ? 70 : 110;
+  Widget _buildPauseButton(BuildContext context, {bool isSmall = false}) {
+    final double size = isSmall
+        ? 70
+        : 110; // This line seems to have an error in the original code.
     final double iconSize = isSmall ? 35 : 50;
     return GestureDetector(
       onTap: onPause,
@@ -2096,10 +2172,10 @@ class _ActivityStatsSheet extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: CustomColors.primary,
+          color: AppColors.primary,
           boxShadow: [
             BoxShadow(
-              color: CustomColors.primary.withOpacity(0.4),
+              color: AppColors.primary.withOpacity(0.4),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -2108,7 +2184,7 @@ class _ActivityStatsSheet extends StatelessWidget {
         child: Center(
           child: Icon(
             Icons.pause,
-            color: CustomColors.tertiary,
+            color: AppColors.dark().background,
             size: iconSize,
           ),
         ),
@@ -2118,19 +2194,21 @@ class _ActivityStatsSheet extends StatelessWidget {
 
   /// Constrói o layout de estatística principal (Ritmo, Duração, Distância)
   Widget _buildMainStat(
+    BuildContext context,
     String label,
     String value,
     String unit, {
     required double fontSize,
     CrossAxisAlignment alignment = CrossAxisAlignment.center,
   }) {
+    final colors = AppColors.of(context);
     return Column(
       crossAxisAlignment: alignment,
       children: [
         Text(
           label,
           style: GoogleFonts.lexend(
-            color: Colors.white.withOpacity(0.5),
+            color: colors.textSecondary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.0,
@@ -2147,12 +2225,12 @@ class _ActivityStatsSheet extends StatelessWidget {
             children: [
               TextSpan(
                 text: value,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: colors.text),
               ),
               TextSpan(
                 text: ' $unit',
                 style: GoogleFonts.lexend(
-                  color: CustomColors.primary,
+                  color: AppColors.primary,
                   fontSize: fontSize * 0.4, // Unidade proporcional ao valor
                   fontWeight: FontWeight.w600,
                   height: 1.5,
@@ -2167,18 +2245,20 @@ class _ActivityStatsSheet extends StatelessWidget {
 
   /// Constrói uma coluna de estatística para o layout minimizado.
   Widget _buildStatColumn(
+    BuildContext context,
     String label,
     String value, {
     String unit = '',
     required double fontSize,
   }) {
+    final colors = AppColors.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
           style: GoogleFonts.lexend(
-            color: Colors.white.withOpacity(0.5),
+            color: colors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -2189,7 +2269,7 @@ class _ActivityStatsSheet extends StatelessWidget {
             style: GoogleFonts.lexend(
               fontSize: fontSize,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: colors.text,
             ),
             children: [
               TextSpan(text: value),
@@ -2197,7 +2277,7 @@ class _ActivityStatsSheet extends StatelessWidget {
                 TextSpan(
                   text: ' $unit',
                   style: GoogleFonts.lexend(
-                    color: CustomColors.primary,
+                    color: AppColors.primary,
                     fontSize: 14,
                   ),
                 ),
@@ -2209,7 +2289,8 @@ class _ActivityStatsSheet extends StatelessWidget {
   }
 
   /// Constrói o layout de estatística de calorias
-  Widget _buildCalorieStat(String value) {
+  Widget _buildCalorieStat(BuildContext context, String value) {
+    final colors = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 20),
       child: Column(
@@ -2219,7 +2300,7 @@ class _ActivityStatsSheet extends StatelessWidget {
           Text(
             'CALORIAS QUEIMADAS',
             style: GoogleFonts.lexend(
-              color: Colors.white.withOpacity(0.5),
+              color: colors.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.0,
@@ -2236,12 +2317,12 @@ class _ActivityStatsSheet extends StatelessWidget {
               children: [
                 TextSpan(
                   text: value,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: colors.text),
                 ),
                 TextSpan(
                   text: ' kcal',
                   style: GoogleFonts.lexend(
-                    color: CustomColors.primary,
+                    color: AppColors.primary,
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                     height: 1.5,

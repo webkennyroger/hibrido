@@ -82,20 +82,22 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Scaffold(
-      backgroundColor: CustomColors.secondary,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: CustomColors.secondary,
+        backgroundColor: colors.background,
         elevation: 0,
         title: Text(
           'Compartilhar Atividade',
           style: GoogleFonts.lexend(
             fontWeight: FontWeight.bold,
-            color: CustomColors.textDark,
+            color: colors.text,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: CustomColors.textDark),
+          icon: Icon(Icons.close, color: colors.text),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -151,7 +153,7 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
               Polyline(
                 polylineId: const PolylineId('route'),
                 points: widget.activityData.routePoints,
-                color: isDarkMode ? Colors.white : CustomColors.primary,
+                color: isDarkMode ? Colors.white : AppColors.primary,
                 width: 4,
               ),
             },
@@ -168,10 +170,12 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
 
   // Constrói a seção inferior com os botões de compartilhamento
   Widget _buildShareSection() {
+    final colors = AppColors.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-      decoration: const BoxDecoration(
-        color: CustomColors.card,
+      decoration: BoxDecoration(
+        color: colors.surface,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -184,7 +188,7 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
             style: GoogleFonts.lexend(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: CustomColors.textDark,
+              color: colors.text,
             ),
           ),
           const SizedBox(height: 20),
@@ -196,7 +200,7 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
             child: ElevatedButton(
               onPressed: _shareActivity,
               style: ElevatedButton.styleFrom(
-                backgroundColor: CustomColors.primary,
+                backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -204,7 +208,7 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
               child: Text(
                 'Compartilhar',
                 style: GoogleFonts.lexend(
-                  color: CustomColors.tertiary,
+                  color: AppColors.dark().background,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -224,7 +228,7 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
       height: 8,
       width: _currentPage == index ? 24 : 8,
       decoration: BoxDecoration(
-        color: _currentPage == index ? CustomColors.primary : Colors.grey,
+        color: _currentPage == index ? AppColors.primary : Colors.grey,
         borderRadius: BorderRadius.circular(5),
       ),
     );
