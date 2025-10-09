@@ -1,19 +1,18 @@
 // main_screen.dart
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:hibrido/features/settings/screens/account_settings_screen.dart';
-// Certifique-se de que o caminho para o seu arquivo de cores está correto
-import 'package:hibrido/core/theme/custom_colors.dart'; // Agora usa AppColors
-// Certifique-se de que os caminhos para os arquivos de dados e tela estão corretos
+import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
-import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart'; // Assuming this is correct
-import 'package:hibrido/features/map/screens/sport_selection_button.dart'; // Corrected import path
+import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart';
+import 'package:hibrido/features/map/screens/sport_selection_button.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hibrido/services/spotify_service.dart';
@@ -355,6 +354,127 @@ class _MapScreenState extends State<MapScreen> {
         });
       }
     });
+  }
+
+  /// Mostra um modal para o usuário escolher o serviço de música.
+  void _showMusicServiceSelectionModal(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (modalContext) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Escolha sua conta',
+                style: GoogleFonts.lexend(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colors.text,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Botão YouTube Music
+                  _buildMusicServiceButton(
+                    context,
+                    iconWidget: SvgPicture.asset(
+                      'assets/images/icons/yt_music_logo.svg',
+                      colorFilter:
+                          ColorFilter.mode(colors.text, BlendMode.srcIn),
+                      width: 32,
+                      height: 32,
+                    ),
+                    label: 'YT Music',
+                    onTap: () {
+                      Navigator.pop(context);
+                      // TODO: Adicionar lógica para conectar ao YouTube Music
+                    },
+                  ),
+                  // Botão Spotify
+                  _buildMusicServiceButton(
+                    context,
+                    iconWidget: SvgPicture.asset(
+                      'assets/images/icons/spotify_logo.svg',
+                      colorFilter:
+                          ColorFilter.mode(colors.text, BlendMode.srcIn),
+                      width: 32,
+                      height: 32,
+                    ),
+                    label: 'Spotify',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _toggleSpotifyPlayer(); // Abre o player do Spotify
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.error, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                child: Text(
+                  'Cancelar',
+                  style: GoogleFonts.lexend(
+                    color: AppColors.error,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Constrói um botão de seleção de serviço de música para o modal.
+  Widget _buildMusicServiceButton(
+    BuildContext context, {
+    required Widget iconWidget,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final colors = AppColors.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.background,
+            ),
+            child: iconWidget,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.lexend(
+              color: colors.text,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   //================================================================================
@@ -1097,6 +1217,7 @@ class _MapScreenState extends State<MapScreen> {
 
   /// Constrói o painel inferior para selecionar o esporte (baseado na imagem).
   Widget _buildSportSelector() {
+    final colors = AppColors.of(context);
     return Positioned(
       bottom: 0,
       left: 0,
@@ -1109,9 +1230,9 @@ class _MapScreenState extends State<MapScreen> {
           }
         },
         child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF232530),
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
             ),
@@ -1133,14 +1254,14 @@ class _MapScreenState extends State<MapScreen> {
                   Text(
                     'Escolha um esporte',
                     style: GoogleFonts.lexend(
-                      color: Colors.white,
+                      color: colors.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   GestureDetector(
                     onTap: _toggleSportSelector,
-                    child: const Icon(Icons.close, color: Colors.white),
+                    child: Icon(Icons.close, color: colors.text),
                   ),
                 ],
               ),
@@ -1151,7 +1272,7 @@ class _MapScreenState extends State<MapScreen> {
               Text(
                 'Seus esportes principais',
                 style: GoogleFonts.lexend(
-                  color: Colors.white,
+                  color: colors.text,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1370,6 +1491,7 @@ class _MapScreenState extends State<MapScreen> {
           onStart: _onMainActionButtonPressed,
           onMusic: _toggleSpotifyPlayer,
           onSportSelect: _toggleSportSelector,
+          onMusicServiceSelect: () => _showMusicServiceSelectionModal(context),
           selectedSport: _selectedSport,
           getSportLabel: _getSportLabel,
           getSportIconPath: _getSportIconPath,
@@ -1490,6 +1612,7 @@ class _NotStartedControls extends StatelessWidget {
   final IconData Function(SportOption)
   getSportCheckIcon; // Função para obter o ícone de fallback
   final VoidCallback onSportSelect; // Callback para quando o botão é tocado
+  final VoidCallback onMusicServiceSelect;
 
   const _NotStartedControls({
     required this.onStart,
@@ -1499,21 +1622,24 @@ class _NotStartedControls extends StatelessWidget {
     required this.getSportIconPath,
     required this.getSportCheckIcon,
     required this.onSportSelect,
+    required this.onMusicServiceSelect,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildActionButton(
-          context, // Corrigido
+          context,
           icon: Icons.music_note_outlined,
-          color: AppColors.dark().background,
-          onTap: onMusic,
+          // Preto no modo claro, Verde no modo escuro
+          color: isDarkMode ? AppColors.primary : colors.text,
+          onTap: onMusicServiceSelect,
         ),
         _buildStartButton(context),
         SportSelectionButton(

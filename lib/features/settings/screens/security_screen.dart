@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-// Certifique-se de que o caminho para o seu arquivo de cores está correto
 import 'package:hibrido/core/theme/custom_colors.dart';
 
 class SecurityScreen extends StatefulWidget {

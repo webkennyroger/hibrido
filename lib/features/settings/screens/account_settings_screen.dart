@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/settings/screens/device_screen.dart';
+import 'package:hibrido/features/settings/screens/activity_settings_screen.dart';
 import 'package:hibrido/features/settings/screens/help_faq_screen.dart';
 import 'package:hibrido/features/settings/screens/notifications_screen.dart';
 import 'package:hibrido/features/settings/screens/privacy_settings_screen.dart';
@@ -155,6 +156,20 @@ class AccountSettingsScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const DeviceScreen()),
+                );
+              },
+              context: context,
+              backgroundColor: colors.surface,
+              contentColor: colors.text,
+            ),
+            _buildSettingsItem(
+              title: 'Ajuste de Atividades',
+              icon: Icons.directions_run, // Ícone relacionado a atividades
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ActivitySettingsScreen()),
                 );
               },
               context: context,

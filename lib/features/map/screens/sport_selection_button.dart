@@ -31,6 +31,7 @@ class SportSelectionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final bool isSelected = selectedSport == option;
 
     // Define a cor de fundo
@@ -41,7 +42,11 @@ class SportSelectionButton extends StatelessWidget {
               : AppColors.primary.withAlpha(
                   (255 * 0.6).round(),
                 )) // Verde translúcido para o pequeno
-        : (isLarge ? colors.background : AppColors.dark().background);
+        : (isDarkMode
+              ? AppColors.light()
+                    .surface // Fundo branco no modo escuro (não selecionado)
+              : AppColors.dark()
+                    .background); // Fundo preto no modo claro (não selecionado)
 
     return GestureDetector(
       onTap: onTap,
@@ -66,15 +71,16 @@ class SportSelectionButton extends StatelessWidget {
                 child: Center(
                   child: SvgPicture.asset(
                     iconPath,
+                    // A cor do ícone agora se adapta ao tema e ao estado de seleção.
                     colorFilter: ColorFilter.mode(
-                      useDarkMode
+                      isSelected
                           ? AppColors.dark()
-                                .background // Ícone sempre preto no modo escuro
-                          : (isSelected
-                                ? (isLarge
-                                      ? AppColors.dark().background
-                                      : AppColors.primary)
-                                : AppColors.dark().background),
+                                .background // Ícone preto quando selecionado
+                          : (isDarkMode
+                                ? AppColors.dark()
+                                      .background // Ícone preto no modo escuro (não selecionado)
+                                : AppColors
+                                      .primary), // Ícone verde no modo claro (não selecionado)
                       BlendMode.srcIn,
                     ),
                     width: 35,
@@ -83,9 +89,15 @@ class SportSelectionButton extends StatelessWidget {
                     errorBuilder: (context, error, stackTrace) {
                       return Icon(
                         fallbackIcon,
+                        // A cor do ícone de fallback agora segue a mesma lógica do SVG.
                         color: isSelected
-                            ? AppColors.primary
-                            : AppColors.dark().background,
+                            ? AppColors.dark()
+                                  .background // Ícone preto quando selecionado
+                            : (isDarkMode
+                                  ? AppColors.dark()
+                                        .background // Ícone preto no modo escuro
+                                  : AppColors
+                                        .primary), // Ícone verde no modo claro
                         size: 35,
                       );
                     },
@@ -97,15 +109,37 @@ class SportSelectionButton extends StatelessWidget {
                 Positioned(
                   top: isLarge ? 0 : -5,
                   right: isLarge ? 0 : -5,
-                  child: Icon(
-                    Icons.check_circle, // Usa sempre o ícone com círculo
-                    color: useDarkMode
-                        ? AppColors.dark()
-                              .background // Check preto se dark mode
-                        : (isLarge
-                              ? AppColors.dark().background
-                              : AppColors.primary),
-                    size: 20, // Usa sempre o mesmo tamanho
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Círculo branco no modo escuro, ou verde/preto no modo claro
+                        Icon(
+                          Icons.circle,
+                          color: isLarge
+                              ? (isDarkMode
+                                    ? AppColors.light()
+                                          .surface // Seletor: Círculo branco
+                                    : AppColors.dark()
+                                          .background) // Seletor: Círculo preto
+                              : AppColors.dark()
+                                    .background, // Mapa: Círculo sempre preto
+                          size: 20,
+                        ),
+                        // Ícone de "check" sempre preto
+                        Icon(
+                          Icons.check,
+                          color: isLarge && isDarkMode
+                              ? AppColors.dark()
+                                    .background // Seletor Dark: Check preto
+                              : AppColors
+                                    .primary, // Seletor Light e Mapa: Check verde
+                          size: 14,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
             ],
@@ -115,7 +149,7 @@ class SportSelectionButton extends StatelessWidget {
             Text(
               label,
               style: GoogleFonts.lexend(
-                color: isSelected ? AppColors.primary : Colors.white,
+                color: isSelected ? AppColors.primary : colors.text,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
