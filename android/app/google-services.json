@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "310219532078",
+    "project_id": "noblug",
+    "storage_bucket": "noblug.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:310219532078:android:1c1dfd14bdede76b273cbf",
+        "android_client_info": {
+          "package_name": "com.example.noblug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "310219532078-imlhkasecf7cj2v0s71qnhf6igr896jr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRhdoGreP90OyaGnLiLtjv2faJXw9E3No"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "310219532078-imlhkasecf7cj2v0s71qnhf6igr896jr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "310219532078-5f5qlote8dffkkrbbm6n5q1t2vd1e9ri.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.noblug"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:310219532078:android:11a1f84c0cb5a88d273cbf",
+        "android_client_info": {
+          "package_name": "com.noblug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "310219532078-j7ncnb5kf9tm37e981kjcj4m5njelib8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.noblug",
+            "certificate_hash": "74f61cd785ba40c17a4ff3fe9911ef6abb348b48"
+          }
+        },
+        {
+          "client_id": "310219532078-imlhkasecf7cj2v0s71qnhf6igr896jr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRhdoGreP90OyaGnLiLtjv2faJXw9E3No"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "310219532078-imlhkasecf7cj2v0s71qnhf6igr896jr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "310219532078-5f5qlote8dffkkrbbm6n5q1t2vd1e9ri.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.noblug"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

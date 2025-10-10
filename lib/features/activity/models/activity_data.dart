@@ -47,6 +47,10 @@ class ActivityData {
   // Método para criar uma cópia do objeto com alguns valores alterados.
   ActivityData copyWith({
     String? id,
+    double? distanceInMeters,
+    Duration? duration,
+    List<LatLng>? routePoints,
+    double? calories,
     String? activityTitle,
     String? sport,
     int? mood,
@@ -55,24 +59,24 @@ class ActivityData {
     List<String>? taggedPartnerIds,
     int? likes,
     bool? isLiked,
-    List<String>? mediaPaths,
     List<String>? commentsList,
+    List<String>? mediaPaths,
   }) {
     return ActivityData(
-      id: id ?? this.id,
-      userName: userName,
+      id: id ?? this.id, // Preserva o ID original
+      userName: this.userName, // Preserva o nome do usuário original
       activityTitle: activityTitle ?? this.activityTitle,
-      runTime: runTime,
-      location: location,
+      runTime: this.runTime, // Preserva o tempo original
+      location: this.location, // Preserva a localização original
       sport: sport ?? this.sport,
-      distanceInMeters: distanceInMeters,
-      duration: duration,
-      routePoints: routePoints,
-      calories: calories,
+      distanceInMeters: distanceInMeters ?? this.distanceInMeters,
+      duration: duration ?? this.duration,
+      routePoints: routePoints ?? this.routePoints,
+      calories: calories ?? this.calories,
       likes: likes ?? this.likes,
       isLiked: isLiked ?? this.isLiked,
       commentsList: commentsList ?? this.commentsList,
-      shares: shares,
+      shares: this.shares, // Preserva os compartilhamentos originais
       privacy: privacy ?? this.privacy,
       notes: notes ?? this.notes,
       taggedPartnerIds: taggedPartnerIds ?? this.taggedPartnerIds,
@@ -111,22 +115,27 @@ class ActivityData {
   /// Cria uma instância de ActivityData a partir de um mapa JSON.
   factory ActivityData.fromJson(Map<String, dynamic> json) {
     return ActivityData(
-      id: json['id'],
-      userName: json['userName'],
-      activityTitle: json['activityTitle'],
-      runTime: json['runTime'],
-      location: json['location'],
+      id: json['id'] ?? '',
+      userName: json['userName'] ?? 'Usuário',
+      activityTitle: json['activityTitle'] ?? 'Atividade',
+      runTime: json['runTime'] ?? 'Data desconhecida',
+      location: json['location'] ?? 'Localização desconhecida',
       sport: json['sport'] ?? 'Corrida', // Valor padrão para atividades antigas
-      distanceInMeters: json['distanceInMeters'],
-      duration: Duration(milliseconds: json['durationInMilliseconds']),
-      routePoints: (json['routePoints'] as List)
-          .map((point) => LatLng(point['lat'], point['lng']))
+      distanceInMeters: (json['distanceInMeters'] as num?)?.toDouble() ?? 0.0,
+      duration: Duration(milliseconds: json['durationInMilliseconds'] ?? 0),
+      routePoints: (json['routePoints'] as List? ?? [])
+          .map(
+            (point) => LatLng(
+              (point['lat'] as num).toDouble(),
+              (point['lng'] as num).toDouble(),
+            ),
+          )
           .toList(),
-      calories: json['calories'],
-      likes: json['likes'],
+      calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
+      likes: json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       commentsList: List<String>.from(json['commentsList'] ?? []),
-      shares: json['shares'],
+      shares: json['shares'] ?? 0,
       privacy: json['privacy'] ?? 'public',
       notes: json['notes'],
       taggedPartnerIds: List<String>.from(json['taggedPartnerIds'] ?? []),

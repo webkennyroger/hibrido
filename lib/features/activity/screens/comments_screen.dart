@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart'
     as ConfirmationSheet;
+import 'package:hibrido/widgets/full_screen_media_viewer.dart';
 
 // Modelo mock para parceiros (reutilizado da tela de confirmação)
 class Partner {
@@ -89,7 +90,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
     if (_commentController.text.trim().isEmpty) return;
 
     setState(() {
-      _comments.insert(0, _commentController.text.trim());
+      _comments.add(
+        _commentController.text.trim(),
+      ); // Adiciona no final da lista
     });
 
     final updatedActivity = widget.activityData.copyWith(
@@ -141,10 +144,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           TextButton(
             onPressed: _isPostButtonEnabled
                 ? () {
-                    _postComment(); // Adiciona o novo comentário
-                    Navigator.of(
-                      context,
-                    ).pop(_comments); // Retorna a lista atualizada
+                    _postComment();
                   }
                 : null,
             child: Text(
@@ -209,8 +209,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
                             color: colors.text,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        _buildStatsRow(colors), // NOVO: Linha de estatísticas
                         // NOVO: Anotações/Descrição da atividade
                         if (widget.activityData.notes != null &&
                             widget.activityData.notes!.isNotEmpty) ...[
@@ -218,11 +216,19 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           Text(
                             widget.activityData.notes!,
                             style: GoogleFonts.lexend(
-                              color: colors.text,
+                              color: colors.textSecondary,
                               fontSize: 14,
+                              height: 1.5,
                             ),
                           ),
                         ],
+                        // Seção de Humor (Emoji)
+                        if (widget.activityData.mood != null) ...[
+                          const SizedBox(height: 16),
+                          _buildMoodDisplay(colors),
+                        ],
+                        const SizedBox(height: 16),
+                        _buildStatsRow(colors), // Linha de estatísticas
                         const SizedBox(height: 12),
                         // Mapa com a rota
                         SizedBox(
@@ -275,12 +281,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         ],
                         // NOVO: Seção de Parceiros
                         _buildPartnersSection(colors),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 24),
                         _buildLikesSection(colors),
+                        const SizedBox(height: 12),
+                        Divider(height: 1, color: colors.text.withOpacity(0.1)),
                       ],
                     ),
                   ),
-                  Divider(height: 1, color: colors.text.withOpacity(0.1)),
                   _comments.isEmpty
                       ? const Padding(
                           padding: EdgeInsets.symmetric(vertical: 80.0),
@@ -330,7 +337,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 Expanded(
                   child: TextField(
                     controller: _commentController,
-                    autofocus: true,
                     style: TextStyle(color: colors.text),
                     decoration: InputDecoration(
                       hintText: 'Adicione um comentário...',
@@ -345,6 +351,27 @@ class _CommentsScreenState extends State<CommentsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Constrói o display do humor selecionado.
+  Widget _buildMoodDisplay(AppColors colors) {
+    final List<IconData> moodIcons = [
+      Icons.sentiment_very_dissatisfied,
+      Icons.sentiment_dissatisfied,
+      Icons.sentiment_neutral,
+      Icons.sentiment_satisfied,
+      Icons.sentiment_very_satisfied,
+    ];
+
+    return Row(
+      children: [
+        Icon(
+          moodIcons[widget.activityData.mood!],
+          color: AppColors.primary,
+          size: 20,
+        ),
+      ],
     );
   }
 
@@ -453,27 +480,38 @@ class _CommentsScreenState extends State<CommentsScreen> {
           ].any((ext) => path.toLowerCase().endsWith(ext));
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 100,
-                height: 100,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (isVideo)
-                      Container(color: Colors.black)
-                    else
-                      Image.file(File(path), fit: BoxFit.cover),
-                    if (isVideo)
-                      const Center(
-                        child: Icon(
-                          Icons.play_circle_outline,
-                          color: Colors.white,
-                          size: 30,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        FullScreenMediaViewer(mediaFile: File(path)),
+                  ),
+                );
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 100,
+                  height: 100,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (isVideo)
+                        Container(color: Colors.black)
+                      else
+                        Image.file(File(path), fit: BoxFit.cover),
+                      if (isVideo)
+                        const Center(
+                          child: Icon(
+                            Icons.play_circle_outline,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -573,9 +611,52 @@ class _CommentsScreenState extends State<CommentsScreen> {
           },
           separatorBuilder: (context, index) => const SizedBox(height: 8),
         ),
-        const SizedBox(height: 16),
-        Divider(height: 1, color: colors.text.withOpacity(0.1)),
       ],
+    );
+  }
+}
+
+/// Widget para exibir a mídia (imagem ou vídeo) em tela cheia.
+class FullScreenMediaViewer extends StatelessWidget {
+  final File mediaFile;
+
+  const FullScreenMediaViewer({super.key, required this.mediaFile});
+
+  @override
+  Widget build(BuildContext context) {
+    final isVideo = [
+      '.mp4',
+      '.mov',
+      '.avi',
+    ].any((ext) => mediaFile.path.toLowerCase().endsWith(ext));
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Center(
+        child: isVideo
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.videocam_off, color: Colors.white, size: 60),
+                    SizedBox(height: 16),
+                    Text(
+                      'Player de vídeo ainda não implementado.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              )
+            : InteractiveViewer(child: Image.file(mediaFile)),
+      ),
     );
   }
 }

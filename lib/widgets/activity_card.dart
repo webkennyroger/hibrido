@@ -11,6 +11,7 @@ import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hibrido/core/utils/map_utils.dart';
+import 'package:hibrido/widgets/full_screen_media_viewer.dart';
 
 // Enum para as opções de privacidade, para manter a consistência.
 enum PrivacyOption { public, followers, private }
@@ -95,6 +96,20 @@ class _ActivityCardState extends State<ActivityCard> {
                   color: colors.text,
                 ),
               ),
+              // NOVO: Adiciona a descrição da atividade se ela existir.
+              if (widget.activityData.notes != null &&
+                  widget.activityData.notes!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  widget.activityData.notes!,
+                  style: GoogleFonts.lexend(
+                    color: colors.textSecondary,
+                    fontSize: 14,
+                  ),
+                  maxLines: 3, // Limita a 3 linhas para não ocupar muito espaço
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
               const SizedBox(height: 8),
               // Mapa com a rota
               _buildMediaSection(), // NOVO: Seção de Mídia
@@ -281,7 +296,7 @@ class _ActivityCardState extends State<ActivityCard> {
   /// Navega para a tela de detalhes da atividade.
   void _navigateToDetails(BuildContext context) async {
     // A navegação para a tela de detalhes é a mesma que a de comentários.
-    final result = await Navigator.push<List<String>>(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CommentsScreen(activityData: widget.activityData),
@@ -289,10 +304,16 @@ class _ActivityCardState extends State<ActivityCard> {
     );
 
     // Se a tela de detalhes retornou uma nova lista de comentários, atualiza o estado.
-    if (result != null) {
+    if (result is List<String>) {
       setState(() {
         _commentsCount = result.length;
       });
+    } else if (result is ActivityData) {
+      // Se a atividade foi editada na tela de detalhes (futura funcionalidade)
+      widget.onUpdate(result);
+    } else if (result == true) {
+      // Se a atividade foi deletada na tela de detalhes
+      widget.onDelete();
     }
   }
 
@@ -409,7 +430,7 @@ class _ActivityCardState extends State<ActivityCard> {
 
   /// NOVO: Constrói a seção de mídia com mapa e fotos.
   Widget _buildMediaSection() {
-    // Se não houver mídias, mostra um mapa grande.
+    // Se não houver mídias e houver rota, mostra um mapa grande.
     if (widget.activityData.mediaPaths.isEmpty) {
       return SizedBox(
         height: 150,
@@ -462,7 +483,19 @@ class _ActivityCardState extends State<ActivityCard> {
             ...widget.activityData.mediaPaths.map(
               (path) => Padding(
                 padding: const EdgeInsets.only(right: 12.0),
-                child: _buildMediaThumbnail(File(path)),
+                // NOVO: Adiciona um GestureDetector para abrir a mídia em tela cheia.
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            FullScreenMediaViewer(mediaFile: File(path)),
+                      ),
+                    );
+                  },
+                  child: _buildMediaThumbnail(File(path)),
+                ),
               ),
             ),
           ],
@@ -691,6 +724,51 @@ class _ActivityCardState extends State<ActivityCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// NOVO: Widget para exibir a mídia (imagem ou vídeo) em tela cheia.
+class FullScreenMediaViewer extends StatelessWidget {
+  final File mediaFile;
+
+  const FullScreenMediaViewer({super.key, required this.mediaFile});
+
+  @override
+  Widget build(BuildContext context) {
+    final isVideo = [
+      '.mp4',
+      '.mov',
+      '.avi',
+    ].any((ext) => mediaFile.path.toLowerCase().endsWith(ext));
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Center(
+        child: isVideo
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.videocam_off, color: Colors.white, size: 60),
+                    SizedBox(height: 16),
+                    Text(
+                      'Player de vídeo ainda não implementado.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              )
+            : InteractiveViewer(child: Image.file(mediaFile)),
       ),
     );
   }

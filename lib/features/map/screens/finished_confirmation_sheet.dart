@@ -1087,6 +1087,10 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                 }
 
                 final finalActivityData = widget.activityData.copyWith(
+                  distanceInMeters: widget.activityData.distanceInMeters,
+                  duration: widget.activityData.duration,
+                  calories: widget.activityData.calories,
+                  routePoints: widget.activityData.routePoints,
                   activityTitle: finalTitle,
                   sport: _getSportLabel(_selectedSport),
                   mood: _selectedMoodIndex,

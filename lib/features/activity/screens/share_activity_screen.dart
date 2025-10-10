@@ -10,6 +10,7 @@ import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:gal/gal.dart';
 
 class ShareActivityScreen extends StatefulWidget {
   final ActivityData activityData;
@@ -45,8 +46,8 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
         });
   }
 
-  // Captura o widget do mapa atual como uma imagem
-  Future<void> _shareActivity() async {
+  // Captura o widget do mapa atual e retorna os bytes da imagem
+  Future<Uint8List?> _captureMapImage() async {
     try {
       // Escolhe a chave correta com base na página atual
       GlobalKey keyToCapture = _currentPage == 0 ? _lightMapKey : _darkMapKey;
@@ -58,26 +59,47 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
       ByteData? byteData = await image.toByteData(
         format: ui.ImageByteFormat.png,
       );
-      Uint8List pngBytes = byteData!.buffer.asUint8List();
-
-      // Salva a imagem em um arquivo temporário
-      final tempDir = await getTemporaryDirectory();
-      final file = await File('${tempDir.path}/activity.png').create();
-      await file.writeAsBytes(pngBytes);
-
-      // Compartilha o arquivo usando o share_plus
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], text: 'Confira minha corrida!');
+      return byteData!.buffer.asUint8List();
     } catch (e) {
-      // print('Erro ao compartilhar atividade: $e');
-      if (!mounted) return;
+      if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Não foi possível compartilhar a imagem.'),
+          content: Text('Não foi possível capturar a imagem da atividade.'),
         ),
       );
+      return null;
     }
+  }
+
+  // Salva a imagem na galeria do celular
+  Future<void> _saveImage() async {
+    final imageBytes = await _captureMapImage();
+    if (imageBytes == null) return;
+
+    try {
+      await Gal.putImageBytes(imageBytes);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Imagem salva na galeria!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Erro ao salvar a imagem.')));
+    }
+  }
+
+  // Abre a funcionalidade de compartilhar com outros apps
+  Future<void> _shareActivity() async {
+    final imageBytes = await _captureMapImage();
+    if (imageBytes == null) return;
+
+    final tempDir = await getTemporaryDirectory();
+    final file = await File('${tempDir.path}/activity.png').create();
+    await file.writeAsBytes(imageBytes);
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Confira minha corrida!');
   }
 
   @override
@@ -184,21 +206,20 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
       child: Column(
         children: [
           Text(
-            'Compartilhar em',
+            'Opções',
             style: GoogleFonts.lexend(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: colors.text,
             ),
           ),
-          const SizedBox(height: 20),
-          // Aqui você pode adicionar ícones de apps específicos,
-          // mas um botão genérico é mais flexível.
+          const SizedBox(height: 24),
+          // Botão para Salvar Imagem
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _shareActivity,
+              onPressed: _saveImage,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
@@ -206,10 +227,36 @@ class _ShareActivityScreenState extends State<ShareActivityScreen> {
                 ),
               ),
               child: Text(
-                'Compartilhar',
+                'Salvar Imagem',
                 style: GoogleFonts.lexend(
                   color: AppColors.dark().background,
-                  fontSize: 18,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Botão para Compartilhar
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton(
+              onPressed: _shareActivity,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: colors.text.withOpacity(0.5),
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              child: Text(
+                'Compartilhar',
+                style: GoogleFonts.lexend(
+                  color: colors.text,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
