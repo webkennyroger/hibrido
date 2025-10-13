@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/screens/activity_screen.dart';
+import 'package:hibrido/features/chat/screens/chat_screen.dart';
 import 'package:hibrido/features/home/screens/home_screen.dart';
 import 'package:hibrido/features/map/screens/map_screen.dart';
 import 'package:hibrido/features/profile/screens/profile_screen.dart';
+import 'package:hibrido/features/activity/screens/activity_screen.dart'
+    show ActivityScreenState;
 
 class AppScreen extends StatefulWidget {
   const AppScreen({super.key});
@@ -19,8 +23,8 @@ class _AppScreenState extends State<AppScreen> {
   // Lista de telas que serão exibidas.
   late final List<Widget> _screens;
   // NOVO: Chave para acessar o estado da ActivityScreen
-  final GlobalKey<State<StatefulWidget>> _activityScreenKey =
-      GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<ActivityScreenState> _activityScreenKey =
+      GlobalKey<ActivityScreenState>();
 
   @override
   void initState() {
@@ -30,6 +34,7 @@ class _AppScreenState extends State<AppScreen> {
       const HomeScreen(),
       // NOVO: Passa a chave para a ActivityScreen
       ActivityScreen(key: _activityScreenKey),
+      const ChatScreen(),
       const ProfileScreen(),
     ];
   }
@@ -81,11 +86,61 @@ class _AppScreenState extends State<AppScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildNavItem(Icons.home_outlined, 0), // Item para HomeScreen
-                _buildNavItem(Icons.bar_chart, 1), // Item para ActivityScreen
                 _buildNavItem(
-                  Icons.person_outline,
+                  SvgPicture.asset(
+                    'assets/images/icons/home.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      _selectedIndex == 0
+                          ? colors.text
+                          : colors.text.withOpacity(0.7),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  0,
+                ), // Item para HomeScreen
+                _buildNavItem(
+                  SvgPicture.asset(
+                    'assets/images/icons/estatistica.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      _selectedIndex == 1
+                          ? colors.text
+                          : colors.text.withOpacity(0.7),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  1,
+                ), // Item para ActivityScreen
+                _buildNavItem(
+                  SvgPicture.asset(
+                    'assets/images/icons/chat.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      _selectedIndex == 2
+                          ? colors.text
+                          : colors.text.withOpacity(0.7),
+                      BlendMode.srcIn,
+                    ),
+                  ),
                   2,
+                ), // Item para ChatScreen
+                _buildNavItem(
+                  SvgPicture.asset(
+                    'assets/images/icons/perfil.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      _selectedIndex == 3
+                          ? colors.text
+                          : colors.text.withOpacity(0.7),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  3,
                 ), // Item para ProfileScreen
               ],
             ),
@@ -105,10 +160,14 @@ class _AppScreenState extends State<AppScreen> {
             ),
             // O botão de ação com o ícone de corrida.
             child: IconButton(
-              icon: Icon(
-                Icons.directions_run,
-                color: AppColors.dark().background,
-                size: 30,
+              icon: SvgPicture.asset(
+                'assets/images/icons/corrida.svg',
+                colorFilter: ColorFilter.mode(
+                  AppColors.dark().background,
+                  BlendMode.srcIn,
+                ),
+                width: 30,
+                height: 30,
               ),
               // Ao ser pressionado, atualiza o estado para mostrar a tela de Atividade (índice 1).
               onPressed: () async {
@@ -124,8 +183,7 @@ class _AppScreenState extends State<AppScreen> {
                   setState(() {
                     _selectedIndex = 1;
                     // NOVO: Força a ActivityScreen a recarregar
-                    (_activityScreenKey.currentState as ActivityScreenState?)
-                        ?.reloadActivities();
+                    _activityScreenKey.currentState?.reloadActivities();
                   });
                 }
               },
@@ -137,10 +195,8 @@ class _AppScreenState extends State<AppScreen> {
   }
 
   /// Constrói um item de navegação individual (ícone).
-  Widget _buildNavItem(IconData icon, int index) {
+  Widget _buildNavItem(Widget icon, int index) {
     // Verifica se este item de navegação é o que está atualmente selecionado.
-    final colors = AppColors.of(context);
-
     final bool isSelected = index == _selectedIndex;
 
     // GestureDetector detecta o toque no ícone para acionar a mudança de tela.
@@ -164,11 +220,7 @@ class _AppScreenState extends State<AppScreen> {
               )
             : null,
         // O ícone do item. A cor também muda com base na seleção.
-        child: Icon(
-          icon,
-          color: isSelected ? colors.text : colors.text.withOpacity(0.7),
-          size: 28,
-        ),
+        child: icon,
       ),
     );
   }
