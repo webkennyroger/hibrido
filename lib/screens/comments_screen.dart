@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
@@ -54,6 +55,29 @@ class _CommentsScreenState extends State<CommentsScreen> {
       if (latLng.longitude < y0) y0 = latLng.longitude;
     }
     return LatLngBounds(northeast: LatLng(x1, y1), southwest: LatLng(x0, y0));
+  }
+
+  /// Formata a data da atividade de forma inteligente.
+  /// Mostra "Hoje" se for no mesmo dia, senão mostra a data completa.
+  String _formatActivityDate(DateTime activityDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final activityDay = DateTime(
+      activityDate.year,
+      activityDate.month,
+      activityDate.day,
+    );
+
+    String datePart;
+    if (activityDay == today) {
+      datePart = 'Hoje';
+    } else {
+      datePart = DateFormat('dd/MM/yyyy').format(activityDate);
+    }
+
+    final timePart = DateFormat('HH:mm').format(activityDate);
+
+    return '$datePart às $timePart';
   }
 
   @override
@@ -130,7 +154,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  widget.activityData.runTime,
+                                  _formatActivityDate(
+                                    widget.activityData.createdAt,
+                                  ),
                                   style: GoogleFonts.lexend(
                                     color: colors.textSecondary,
                                     fontSize: 12,

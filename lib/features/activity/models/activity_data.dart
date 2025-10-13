@@ -5,7 +5,7 @@ class ActivityData {
   final String id; // ID único para cada atividade
   final String userName;
   final String activityTitle;
-  final String runTime;
+  final DateTime createdAt;
   final String location;
   final String sport;
   final double distanceInMeters;
@@ -26,7 +26,7 @@ class ActivityData {
     required this.id,
     required this.userName,
     required this.activityTitle,
-    required this.runTime,
+    required this.createdAt,
     required this.location,
     required this.sport,
     required this.distanceInMeters,
@@ -66,7 +66,7 @@ class ActivityData {
       id: id ?? this.id, // Preserva o ID original
       userName: this.userName, // Preserva o nome do usuário original
       activityTitle: activityTitle ?? this.activityTitle,
-      runTime: this.runTime, // Preserva o tempo original
+      createdAt: this.createdAt, // Preserva a data de criação original
       location: this.location, // Preserva a localização original
       sport: sport ?? this.sport,
       distanceInMeters: distanceInMeters ?? this.distanceInMeters,
@@ -91,7 +91,7 @@ class ActivityData {
       'id': id,
       'userName': userName,
       'activityTitle': activityTitle,
-      'runTime': runTime,
+      'createdAt': createdAt.toIso8601String(),
       'location': location,
       'sport': sport,
       'distanceInMeters': distanceInMeters,
@@ -118,7 +118,10 @@ class ActivityData {
       id: json['id'] ?? '',
       userName: json['userName'] ?? 'Usuário',
       activityTitle: json['activityTitle'] ?? 'Atividade',
-      runTime: json['runTime'] ?? 'Data desconhecida',
+      // Converte a string ISO8601 de volta para DateTime e depois para o fuso horário local.
+      createdAt:
+          DateTime.tryParse(json['createdAt'] ?? '')?.toLocal() ??
+          DateTime.now(),
       location: json['location'] ?? 'Localização desconhecida',
       sport: json['sport'] ?? 'Corrida', // Valor padrão para atividades antigas
       distanceInMeters: (json['distanceInMeters'] as num?)?.toDouble() ?? 0.0,

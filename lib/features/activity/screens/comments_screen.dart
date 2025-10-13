@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
@@ -118,6 +119,29 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return speedKmH.toStringAsFixed(2);
   }
 
+  /// Formata a data da atividade de forma inteligente.
+  /// Mostra "Hoje" se for no mesmo dia, senão mostra a data completa.
+  String _formatActivityDate(DateTime activityDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final activityDay = DateTime(
+      activityDate.year,
+      activityDate.month,
+      activityDate.day,
+    );
+
+    String datePart;
+    if (activityDay == today) {
+      datePart = 'Hoje';
+    } else {
+      datePart = DateFormat('dd/MM/yyyy').format(activityDate);
+    }
+
+    final timePart = DateFormat('HH:mm').format(activityDate);
+
+    return '$datePart às $timePart';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -190,7 +214,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  widget.activityData.runTime,
+                                  _formatActivityDate(
+                                    widget.activityData.createdAt,
+                                  ),
                                   style: GoogleFonts.lexend(
                                     color: colors.textSecondary,
                                     fontSize: 12,

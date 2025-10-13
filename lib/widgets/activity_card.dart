@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
+import 'package:intl/intl.dart';
 import 'package:hibrido/features/activity/screens/comments_screen.dart';
 import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
@@ -67,6 +68,29 @@ class _ActivityCardState extends State<ActivityCard> {
         _commentsCount = widget.activityData.commentsList.length;
       });
     }
+  }
+
+  /// Formata a data da atividade de forma inteligente.
+  /// Mostra "Hoje" se for no mesmo dia, senão mostra a data completa.
+  String _formatActivityDate(DateTime activityDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final activityDay = DateTime(
+      activityDate.year,
+      activityDate.month,
+      activityDate.day,
+    );
+
+    String datePart;
+    if (activityDay == today) {
+      datePart = 'Hoje';
+    } else {
+      datePart = DateFormat('dd/MM/yyyy').format(activityDate);
+    }
+
+    final timePart = DateFormat('HH:mm').format(activityDate);
+
+    return '$datePart às $timePart';
   }
 
   @override
@@ -167,7 +191,7 @@ class _ActivityCardState extends State<ActivityCard> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${widget.activityData.runTime} - ${widget.activityData.location}',
+                    '${_formatActivityDate(widget.activityData.createdAt)} - ${widget.activityData.location}',
                     style: GoogleFonts.lexend(
                       color: colors.textSecondary,
                       fontSize: 12,

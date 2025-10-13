@@ -389,8 +389,10 @@ class _MapScreenState extends State<MapScreen> {
                     context,
                     iconWidget: SvgPicture.asset(
                       'assets/images/icons/yt_music_logo.svg',
-                      colorFilter:
-                          ColorFilter.mode(colors.text, BlendMode.srcIn),
+                      colorFilter: ColorFilter.mode(
+                        colors.text,
+                        BlendMode.srcIn,
+                      ),
                       width: 32,
                       height: 32,
                     ),
@@ -405,8 +407,10 @@ class _MapScreenState extends State<MapScreen> {
                     context,
                     iconWidget: SvgPicture.asset(
                       'assets/images/icons/spotify_logo.svg',
-                      colorFilter:
-                          ColorFilter.mode(colors.text, BlendMode.srcIn),
+                      colorFilter: ColorFilter.mode(
+                        colors.text,
+                        BlendMode.srcIn,
+                      ),
                       width: 32,
                       height: 32,
                     ),
@@ -540,7 +544,7 @@ class _MapScreenState extends State<MapScreen> {
       userName: user.name,
       activityTitle: _getSportLabel(_selectedSport),
       sport: _getSportLabel(_selectedSport),
-      runTime: 'Manhã de Quarta-feira',
+      createdAt: DateTime.now(), // Salva a data e hora exatas
       location: user.location,
       distanceInMeters: _totalDistanceInMeters,
       duration: _stopwatch.elapsed,

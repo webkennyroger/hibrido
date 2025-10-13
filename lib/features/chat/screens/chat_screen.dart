@@ -46,6 +46,20 @@ class _ChatScreenState extends State<ChatScreen> {
     ),
   ];
 
+  /// Lida com a ação de "puxar para atualizar".
+  Future<void> _handleRefresh() async {
+    // Simula uma chamada de rede para atualizar a lista de conversas.
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Em um aplicativo real, você recarregaria os dados de uma API aqui.
+    // Como os dados são mock, apenas chamamos setState para reconstruir a UI.
+    if (mounted) {
+      setState(() {
+        // A lógica de atualização de dados viria aqui.
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -75,12 +89,18 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: _conversations.length,
-        itemBuilder: (context, index) {
-          final conversation = _conversations[index];
-          return _ConversationTile(conversation: conversation, colors: colors);
-        },
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: ListView.builder(
+          itemCount: _conversations.length,
+          itemBuilder: (context, index) {
+            final conversation = _conversations[index];
+            return _ConversationTile(
+              conversation: conversation,
+              colors: colors,
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
