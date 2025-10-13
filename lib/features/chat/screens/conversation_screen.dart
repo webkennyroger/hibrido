@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/chat/screens/audio_calling.dart';
-import 'package:hibrido/features/chat/screens/chats_screen.dart';
 import 'package:hibrido/features/chat/screens/video_voice_calling.dart';
+import 'package:hibrido/features/chat/models/chat_argument.dart';
 
 class ConversationScreen extends StatelessWidget {
-  final Chat chat;
+  final ChatArgument chat;
   const ConversationScreen({super.key, required this.chat});
 
   @override
@@ -358,6 +358,11 @@ class AudioMessage extends StatelessWidget {
   const AudioMessage({super.key, this.message});
   @override
   Widget build(BuildContext context) {
+    // Adiciona uma verificação para garantir que a mensagem não é nula.
+    if (message == null) {
+      return const SizedBox.shrink(); // Retorna um widget vazio se a mensagem for nula.
+    }
+
     return Container(
       width: MediaQuery.of(context).size.width * 0.55,
       padding: const EdgeInsets.symmetric(

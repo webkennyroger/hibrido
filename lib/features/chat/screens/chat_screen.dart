@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/chat/models/conversation.dart';
-import 'package:hibrido/features/chat/screens/chats_screen.dart';
 import 'package:hibrido/features/chat/screens/conversation_screen.dart';
 import 'package:hibrido/features/chat/screens/message_search_screen.dart';
+import 'package:hibrido/features/chat/models/chat_argument.dart';
 import 'package:hibrido/features/chat/screens/contacts_screen.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -151,7 +151,7 @@ class _ConversationTile extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => ConversationScreen(
-              chat: Chat(
+              chat: ChatArgument(
                 name: conversation.name,
                 image: conversation.avatarUrl,
               ),

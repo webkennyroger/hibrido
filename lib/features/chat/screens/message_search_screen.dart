@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/chat/models/conversation.dart';
-import 'package:hibrido/features/chat/screens/chats_screen.dart';
 import 'package:hibrido/features/chat/screens/conversation_screen.dart';
+import 'package:hibrido/features/chat/models/chat_argument.dart';
 
 class MessageSearchScreen extends StatefulWidget {
   const MessageSearchScreen({super.key});
@@ -160,7 +160,7 @@ class _MessageSearchScreenState extends State<MessageSearchScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => ConversationScreen(
-                        chat: Chat(
+                        chat: ChatArgument(
                           name: conversation.name,
                           image: conversation.avatarUrl,
                         ),

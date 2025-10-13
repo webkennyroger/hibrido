@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
-import 'package:hibrido/features/chat/screens/chats_screen.dart';
 import 'package:hibrido/features/chat/screens/conversation_screen.dart';
 import 'package:hibrido/features/chat/screens/message_search_screen.dart';
+import 'package:hibrido/features/chat/models/chat_argument.dart';
+import 'package:hibrido/features/chat/models/circle_avatar_with_active_indicator.dart';
 
 class ContactsScreen extends StatelessWidget {
   const ContactsScreen({super.key});
@@ -44,8 +45,8 @@ class ContactsScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (context) => ConversationScreen(
-                  chat: Chat(
-                    name: "Jenny Wilson",
+                  chat: ChatArgument(
+                    name: "Jenny Wilson", // Considere tornar este nome dinâmico
                     image: demoContactsImage[index],
                   ),
                 ),
@@ -91,45 +92,6 @@ class ContactCard extends StatelessWidget {
         padding: const EdgeInsets.only(top: 16.0 / 2),
         child: Text(number, style: TextStyle(color: colors.textSecondary)),
       ),
-    );
-  }
-}
-
-class CircleAvatarWithActiveIndicator extends StatelessWidget {
-  const CircleAvatarWithActiveIndicator({
-    super.key,
-    this.image,
-    this.radius = 24,
-    this.isActive,
-  });
-
-  final String? image;
-  final double? radius;
-  final bool? isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        CircleAvatar(radius: radius, backgroundImage: NetworkImage(image!)),
-        if (isActive!)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 16,
-              width: 16,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  width: 3,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
