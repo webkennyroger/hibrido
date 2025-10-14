@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart' as audio_players;
 import 'package:chewie/chewie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
@@ -14,9 +16,10 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:open_file/open_file.dart';
 import 'package:video_player/video_player.dart';
 
-enum MessageType { text, image, video, audio }
+enum MessageType { text, image, video, audio, document }
 
 class ChatMessage {
   final String id;
@@ -131,8 +134,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final result = await _recorder.stopRecorder();
     if (result != null) {
       final audioPlayerForDuration = audio_players.AudioPlayer();
-      await audioPlayerForDuration.setSourceDeviceFile(result);
-      final duration = await audioPlayerForDuration.getDuration();
+      // Para arquivos locais, use setSourceDeviceFile
+      if (!kIsWeb) {
+        await audioPlayerForDuration.setSource(
+          audio_players.DeviceFileSource(result),
+        );
+      }
+      // getDuration() pode ser nulo, então fornecemos um valor padrão.
+      final duration =
+          await audioPlayerForDuration.getDuration() ?? Duration.zero;
       await audioPlayerForDuration.dispose();
 
       final newMessage = ChatMessage(
@@ -175,9 +185,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final XFile? pickedFile = type == FileType.image
           ? await _picker.pickImage(source: ImageSource.gallery)
           : await _picker.pickVideo(source: ImageSource.gallery);
+
       if (pickedFile != null) {
+        final fileLength = await pickedFile.length();
         result = FilePickerResult([
-          PlatformFile(path: pickedFile.path, name: pickedFile.name, size: 0),
+          PlatformFile(
+            path: pickedFile.path,
+            name: pickedFile.name,
+            size: fileLength,
+          ),
         ]);
       }
     } else {
@@ -206,13 +222,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
       } else if ([
         'mp3',
         'wav',
-        'm4a',
       ].any((ext) => path.toLowerCase().endsWith(ext))) {
         messageType = MessageType.audio;
       } else {
-        // Para outros tipos de arquivo, podemos tratar como texto por enquanto
-        // ou criar um tipo 'document'
-        messageType = MessageType.text;
+        // Qualquer outro tipo de arquivo será tratado como um documento.
+        messageType = MessageType.document;
       }
 
       final newMessage = ChatMessage(
@@ -225,6 +239,88 @@ class _ConversationScreenState extends State<ConversationScreen> {
       );
       setState(() {
         _messages.add(newMessage);
+        _showAttachmentMenu = false; // Fecha o menu de anexos
+      });
+    }
+  }
+
+  // NOVO: Função para capturar mídia pela câmera e enviar
+  Future<void> _captureAndSendMedia({required bool isVideo}) async {
+    final XFile? pickedFile = isVideo
+        ? await _picker.pickVideo(source: ImageSource.camera)
+        : await _picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      final newMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: pickedFile.name,
+        type: isVideo ? MessageType.video : MessageType.image,
+        mediaUrl: pickedFile.path,
+        isSentByMe: true,
+        timestamp: DateTime.now(),
+      );
+      setState(() {
+        _messages.add(newMessage);
+      });
+    }
+  }
+
+  // NOVO: Mostra um menu para escolher entre tirar foto ou gravar vídeo
+  void _showCameraActionSheet(BuildContext context) {
+    final colors = AppColors.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.background,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: Icon(Icons.photo_camera, color: colors.text),
+                title: Text('Tirar Foto', style: TextStyle(color: colors.text)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _captureAndSendMedia(isVideo: false);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.videocam, color: colors.text),
+                title: Text(
+                  'Gravar Vídeo',
+                  style: TextStyle(color: colors.text),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _captureAndSendMedia(isVideo: true);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // NOVO: Função para lidar com a atualização da conversa
+  Future<void> _handleRefresh() async {
+    // Simula uma chamada de rede para buscar mensagens mais antigas.
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (mounted) {
+      setState(() {
+        // Adiciona uma mensagem de exemplo no início da lista para simular o carregamento.
+        _messages.insert(
+          0,
+          ChatMessage(
+            id: 'old_${DateTime.now().millisecondsSinceEpoch}',
+            text: 'Mensagem antiga carregada.',
+            type: MessageType.text,
+            isSentByMe: false,
+            timestamp: _messages.first.timestamp.subtract(
+              const Duration(minutes: 1),
+            ),
+          ),
+        );
       });
     }
   }
@@ -266,15 +362,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(0),
-                reverse: true,
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  // Invertendo a lista para mostrar a mais recente no final
-                  final message = _messages.reversed.toList()[index];
-                  return _buildMessageBubble(message);
-                },
+              // NOVO: Adiciona o RefreshIndicator para permitir "puxar para atualizar"
+              child: RefreshIndicator(
+                onRefresh: _handleRefresh,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(0),
+                  reverse: true,
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    // Invertendo a lista para mostrar a mais recente no final
+                    final message = _messages.reversed.toList()[index];
+                    return Align(
+                      alignment: message.isSentByMe
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: _buildMessageBubble(message),
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -293,7 +398,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ? CrossAxisAlignment.end
         : CrossAxisAlignment.start;
     final bubbleColor = isMyMessage ? AppColors.primary : colors.surface;
-    final textColor = isMyMessage ? AppColors.dark().text : colors.text;
+    final textColor = isMyMessage ? AppColors.dark().background : colors.text;
 
     Widget messageContent;
     switch (message.type) {
@@ -308,6 +413,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
           mediaUrl: message.mediaUrl!,
           duration: message.audioDuration ?? Duration.zero,
           isMyMessage: isMyMessage,
+        );
+        break;
+      case MessageType.document:
+        messageContent = _DocumentMessageBubble(
+          fileName: message.text,
+          filePath: message.mediaUrl!,
         );
         break;
       case MessageType.text:
@@ -328,14 +439,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.75,
             ),
-            padding: message.type == MessageType.text
-                ? const EdgeInsets.symmetric(vertical: 10, horizontal: 14)
-                : const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: BorderRadius.circular(15),
             ),
-            child: messageContent,
+            // O ClipRRect agora envolve a mensagem para aplicar o borderRadius à mídia.
+            // O padding é aplicado apenas para mensagens de texto.
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: Padding(
+                padding: message.type == MessageType.text
+                    ? const EdgeInsets.symmetric(vertical: 10, horizontal: 14)
+                    : EdgeInsets.zero,
+                child: messageContent,
+              ),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -402,19 +520,28 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       )
                     : TextField(
                         controller: _textController,
+                        onChanged: (text) => setState(() {}),
                         style: GoogleFonts.lexend(color: colors.text),
                         decoration: InputDecoration(
                           hintText: 'Digite uma mensagem...',
                           hintStyle: GoogleFonts.lexend(
                             color: colors.textSecondary,
                           ),
+                          contentPadding: const EdgeInsets.only(
+                            left: 20,
+                            right: 10,
+                            top: 10,
+                            bottom: 10,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              Icons.camera_alt,
+                              color: colors.textSecondary,
+                            ),
+                            onPressed: () => _showCameraActionSheet(context),
                           ),
                         ),
-                        onChanged: (text) => setState(() {}),
                       ),
               ),
             ),
@@ -507,7 +634,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
           CircleAvatar(
             radius: 30,
             backgroundColor: AppColors.primary,
-            child: Icon(icon, color: Colors.white, size: 28),
+            child: Icon(
+              icon,
+              color: AppColors.dark().background, // Ícone preto
+              size: 28,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -523,7 +654,68 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 }
 
-// WIDGETS DE MENSAGEM DE MÍDIA
+// NOVO: Widget para exibir um balão de mensagem de documento
+class _DocumentMessageBubble extends StatelessWidget {
+  final String fileName;
+  final String filePath;
+
+  const _DocumentMessageBubble({
+    required this.fileName,
+    required this.filePath,
+  });
+
+  IconData _getIconForFile(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+        return Icons.table_chart;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return GestureDetector(
+      onTap: () async {
+        final result = await OpenFile.open(filePath);
+        if (result.type != ResultType.done && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Não foi possível abrir o arquivo: ${result.message}',
+              ),
+            ),
+          );
+        }
+      },
+      child: SizedBox(
+        width: 250,
+        child: Row(
+          children: [
+            Icon(_getIconForFile(fileName), color: colors.text, size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                fileName,
+                style: GoogleFonts.lexend(color: colors.text, fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _ImageMessageBubble extends StatelessWidget {
   final String mediaUrl;
@@ -536,27 +728,31 @@ class _ImageMessageBubble extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => FullScreenMediaViewer(imageUrl: mediaUrl),
+            // Passa o parâmetro correto dependendo se é uma URL ou um arquivo local
+            builder: (_) => mediaUrl.startsWith('http')
+                ? FullScreenMediaViewer(imageUrl: mediaUrl)
+                : FullScreenMediaViewer(mediaFile: File(mediaUrl)),
           ),
         );
       },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          mediaUrl,
-          height: 200,
-          width: 200,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              height: 200,
-              width: 200,
-              color: Colors.grey[800],
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          },
-        ),
+      // O ClipRRect foi movido para o _buildMessageBubble.
+      // O tamanho agora é definido por um AspectRatio para manter a proporção.
+      // Adicionando um AspectRatio para garantir que a imagem não cause overflow.
+      child: AspectRatio(
+        aspectRatio: 16 / 9, // Uma proporção padrão para a pré-visualização
+        child: mediaUrl.startsWith('http')
+            ? Image.network(
+                mediaUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.grey[800],
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                },
+              )
+            : Image.file(File(mediaUrl), fit: BoxFit.cover),
       ),
     );
   }
@@ -577,9 +773,16 @@ class _VideoMessageBubbleState extends State<_VideoMessageBubble> {
   @override
   void initState() {
     super.initState();
-    _videoPlayerController = VideoPlayerController.networkUrl(
-      Uri.parse(widget.mediaUrl),
-    );
+    // Verifica se a URL é de rede ou um caminho de arquivo local
+    if (widget.mediaUrl.startsWith('http')) {
+      _videoPlayerController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.mediaUrl),
+      );
+    } else {
+      _videoPlayerController = VideoPlayerController.file(
+        File(widget.mediaUrl),
+      );
+    }
     _initializePlayer();
   }
 
@@ -594,6 +797,32 @@ class _VideoMessageBubbleState extends State<_VideoMessageBubble> {
           color: Colors.black,
           child: const Center(child: CircularProgressIndicator()),
         ),
+        // NOVO: Adiciona a opção de download ao menu do player
+        additionalOptions: (context) {
+          return <OptionItem>[
+            OptionItem(
+              onTap: (context) async {
+                Navigator.pop(context); // Fecha o menu de opções
+                try {
+                  await Gal.putVideo(widget.mediaUrl);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Vídeo salvo na galeria!')),
+                    );
+                  }
+                } catch (e) {
+                  // Tratar erro de permissão ou falha ao salvar
+                }
+              },
+              iconData: Icons.download,
+              title: 'Baixar',
+            ),
+          ];
+        },
+        // NOVO: Traduz os textos do player de vídeo
+        optionsTranslation: OptionsTranslation(
+          playbackSpeedButtonText: 'Velocidade',
+        ),
       );
     });
   }
@@ -607,18 +836,21 @@ class _VideoMessageBubbleState extends State<_VideoMessageBubble> {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        height: 250,
-        width: 200,
-        child:
-            _chewieController != null &&
-                _chewieController!.videoPlayerController.value.isInitialized
-            ? Chewie(controller: _chewieController!)
-            : const Center(child: CircularProgressIndicator()),
-      ),
-    );
+    // O ClipRRect foi movido para o _buildMessageBubble.
+    // O tamanho agora é definido por um AspectRatio para manter a proporção do vídeo.
+    return _chewieController != null &&
+            _chewieController!.videoPlayerController.value.isInitialized
+        ? AspectRatio(
+            aspectRatio:
+                _chewieController!.videoPlayerController.value.aspectRatio,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                iconTheme: const IconThemeData(color: AppColors.primary),
+              ),
+              child: Chewie(controller: _chewieController!),
+            ),
+          )
+        : const Center(child: CircularProgressIndicator());
   }
 }
 
@@ -647,8 +879,9 @@ class _AudioMessageBubbleState extends State<_AudioMessageBubble> {
   void initState() {
     super.initState();
     _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (mounted)
+      if (mounted) {
         setState(() => _isPlaying = state == audio_players.PlayerState.playing);
+      }
     });
 
     _audioPlayer.onPositionChanged.listen((position) {
@@ -656,11 +889,12 @@ class _AudioMessageBubbleState extends State<_AudioMessageBubble> {
     });
 
     _audioPlayer.onPlayerComplete.listen((event) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isPlaying = false;
           _currentPosition = Duration.zero;
         });
+      }
     });
   }
 
@@ -674,7 +908,9 @@ class _AudioMessageBubbleState extends State<_AudioMessageBubble> {
     if (_isPlaying) {
       _audioPlayer.pause();
     } else {
-      _audioPlayer.play(audio_players.DeviceFileSource(widget.mediaUrl));
+      _audioPlayer.play(
+        audio_players.DeviceFileSource(widget.mediaUrl),
+      ); // Correto para arquivos locais
     }
   }
 
@@ -695,7 +931,9 @@ class _AudioMessageBubbleState extends State<_AudioMessageBubble> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final iconColor = widget.isMyMessage ? AppColors.dark().text : colors.text;
+    final iconColor = widget.isMyMessage
+        ? AppColors.dark().background
+        : colors.text;
 
     return SizedBox(
       width: 250,

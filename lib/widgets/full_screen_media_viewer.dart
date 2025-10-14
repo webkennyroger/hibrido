@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
 import 'package:video_player/video_player.dart';
+import 'package:hibrido/core/theme/custom_colors.dart';
 
 /// Widget para exibir a mídia (imagem ou vídeo) em tela cheia.
 class FullScreenMediaViewer extends StatefulWidget {
@@ -24,22 +26,31 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
   @override
   void initState() {
     super.initState();
-    _isVideo =
-        widget.mediaFile != null &&
-        [
-          '.mp4',
-          '.mov',
-          '.avi',
-        ].any((ext) => widget.mediaFile!.path.toLowerCase().endsWith(ext));
+    // Determina se é um vídeo com base no mediaFile ou no imageUrl
+    final path = widget.mediaFile?.path ?? widget.imageUrl;
+    if (path != null) {
+      _isVideo = [
+        '.mp4',
+        '.mov',
+        '.avi',
+      ].any((ext) => path.toLowerCase().endsWith(ext));
+    }
 
     if (_isVideo) {
-      _videoController = VideoPlayerController.file(widget.mediaFile!)
-        ..initialize().then((_) {
-          // Garante que o primeiro frame seja exibido e inicia o vídeo.
-          setState(() {});
-          _videoController?.play();
-          _videoController?.setLooping(true);
-        });
+      // Inicializa o controller correto com base na fonte (arquivo ou rede)
+      if (widget.mediaFile != null) {
+        _videoController = VideoPlayerController.file(widget.mediaFile!);
+      } else if (widget.imageUrl != null) {
+        _videoController = VideoPlayerController.networkUrl(
+          Uri.parse(widget.imageUrl!),
+        );
+      }
+      _videoController?.initialize().then((_) {
+        // Garante que o primeiro frame seja exibido e inicia o vídeo.
+        setState(() {});
+        _videoController?.play();
+        _videoController?.setLooping(true);
+      });
     }
   }
 
@@ -60,6 +71,37 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          // Mostra o menu de download apenas se for uma imagem
+          if (!_isVideo)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: AppColors.primary),
+              onSelected: (value) async {
+                if (value == 'download') {
+                  try {
+                    // Usa o caminho do arquivo local ou a URL da imagem
+                    final path = widget.mediaFile?.path ?? widget.imageUrl!;
+                    await Gal.putImage(path);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Imagem salva na galeria!'),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    // Tratar erro de permissão ou falha ao salvar
+                  }
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'download',
+                  child: Text('Baixar imagem'),
+                ),
+              ],
+            ),
+        ],
       ),
       body: Center(
         child: _isVideo

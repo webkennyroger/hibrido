@@ -110,7 +110,10 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         },
         backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(
+          Icons.add,
+          color: AppColors.dark().background, // Ícone preto
+        ),
       ),
     );
   }
@@ -159,7 +162,11 @@ class _ConversationTile extends StatelessWidget {
               ),
               child: Text(
                 conversation.unreadCount.toString(),
-                style: GoogleFonts.lexend(color: Colors.white, fontSize: 12),
+                style: GoogleFonts.lexend(
+                  color: AppColors.dark().background, // Cor preta para o número
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
             )
           else

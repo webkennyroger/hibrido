@@ -755,17 +755,24 @@ class _ActivityCardState extends State<ActivityCard> {
 
 /// NOVO: Widget para exibir a mídia (imagem ou vídeo) em tela cheia.
 class FullScreenMediaViewer extends StatelessWidget {
-  final File mediaFile;
+  final File? mediaFile;
+  final String? imageUrl;
 
-  const FullScreenMediaViewer({super.key, required this.mediaFile});
+  const FullScreenMediaViewer({super.key, this.mediaFile, this.imageUrl})
+    : assert(
+        mediaFile != null || imageUrl != null,
+        'É necessário fornecer mediaFile ou imageUrl',
+      );
 
   @override
   Widget build(BuildContext context) {
-    final isVideo = [
-      '.mp4',
-      '.mov',
-      '.avi',
-    ].any((ext) => mediaFile.path.toLowerCase().endsWith(ext));
+    final isVideo =
+        mediaFile != null &&
+        [
+          '.mp4',
+          '.mov',
+          '.avi',
+        ].any((ext) => mediaFile!.path.toLowerCase().endsWith(ext));
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -792,7 +799,11 @@ class FullScreenMediaViewer extends StatelessWidget {
                   ],
                 ),
               )
-            : InteractiveViewer(child: Image.file(mediaFile)),
+            : InteractiveViewer(
+                child: mediaFile != null
+                    ? Image.file(mediaFile!)
+                    : Image.network(imageUrl!),
+              ),
       ),
     );
   }

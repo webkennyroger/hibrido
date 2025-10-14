@@ -93,8 +93,11 @@ class _AppScreenState extends State<AppScreen> {
                     height: 24,
                     colorFilter: ColorFilter.mode(
                       _selectedIndex == 0
-                          ? colors.text
-                          : colors.text.withOpacity(0.7),
+                          ? AppColors.dark()
+                                .background // Ícone preto quando selecionado
+                          : colors.text.withOpacity(
+                              0.7,
+                            ), // Cor padrão quando não selecionado
                       BlendMode.srcIn,
                     ),
                   ),
@@ -107,8 +110,11 @@ class _AppScreenState extends State<AppScreen> {
                     height: 24,
                     colorFilter: ColorFilter.mode(
                       _selectedIndex == 1
-                          ? colors.text
-                          : colors.text.withOpacity(0.7),
+                          ? AppColors.dark()
+                                .background // Ícone preto quando selecionado
+                          : colors.text.withOpacity(
+                              0.7,
+                            ), // Cor padrão quando não selecionado
                       BlendMode.srcIn,
                     ),
                   ),
@@ -121,8 +127,11 @@ class _AppScreenState extends State<AppScreen> {
                     height: 24,
                     colorFilter: ColorFilter.mode(
                       _selectedIndex == 2
-                          ? colors.text
-                          : colors.text.withOpacity(0.7),
+                          ? AppColors.dark()
+                                .background // Ícone preto quando selecionado
+                          : colors.text.withOpacity(
+                              0.7,
+                            ), // Cor padrão quando não selecionado
                       BlendMode.srcIn,
                     ),
                   ),
@@ -135,8 +144,11 @@ class _AppScreenState extends State<AppScreen> {
                     height: 24,
                     colorFilter: ColorFilter.mode(
                       _selectedIndex == 3
-                          ? colors.text
-                          : colors.text.withOpacity(0.7),
+                          ? AppColors.dark()
+                                .background // Ícone preto quando selecionado
+                          : colors.text.withOpacity(
+                              0.7,
+                            ), // Cor padrão quando não selecionado
                       BlendMode.srcIn,
                     ),
                   ),
