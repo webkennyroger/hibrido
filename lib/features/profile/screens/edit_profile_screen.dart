@@ -257,6 +257,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onTap: () {
                 // Cria um novo objeto UserModel com os dados atualizados
                 final updatedUser = UserModel(
+                  id: widget.user.id, // Adiciona o ID do usuário existente
                   name: _nameController.text.trim(),
                   email: _emailController.text.trim(),
                   location: _locationController.text.trim(),

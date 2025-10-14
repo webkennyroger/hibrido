@@ -4,9 +4,14 @@ import 'package:video_player/video_player.dart';
 
 /// Widget para exibir a mídia (imagem ou vídeo) em tela cheia.
 class FullScreenMediaViewer extends StatefulWidget {
-  final File mediaFile;
+  final File? mediaFile;
+  final String? imageUrl;
 
-  const FullScreenMediaViewer({super.key, required this.mediaFile});
+  const FullScreenMediaViewer({super.key, this.mediaFile, this.imageUrl})
+    : assert(
+        mediaFile != null || imageUrl != null,
+        'É necessário fornecer mediaFile ou imageUrl',
+      );
 
   @override
   State<FullScreenMediaViewer> createState() => _FullScreenMediaViewerState();
@@ -19,14 +24,16 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
   @override
   void initState() {
     super.initState();
-    _isVideo = [
-      '.mp4',
-      '.mov',
-      '.avi',
-    ].any((ext) => widget.mediaFile.path.toLowerCase().endsWith(ext));
+    _isVideo =
+        widget.mediaFile != null &&
+        [
+          '.mp4',
+          '.mov',
+          '.avi',
+        ].any((ext) => widget.mediaFile!.path.toLowerCase().endsWith(ext));
 
     if (_isVideo) {
-      _videoController = VideoPlayerController.file(widget.mediaFile)
+      _videoController = VideoPlayerController.file(widget.mediaFile!)
         ..initialize().then((_) {
           // Garante que o primeiro frame seja exibido e inicia o vídeo.
           setState(() {});
@@ -57,7 +64,11 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
       body: Center(
         child: _isVideo
             ? _buildVideoPlayer()
-            : InteractiveViewer(child: Image.file(widget.mediaFile)),
+            : InteractiveViewer(
+                child: widget.mediaFile != null
+                    ? Image.file(widget.mediaFile!)
+                    : Image.network(widget.imageUrl!),
+              ),
       ),
     );
   }

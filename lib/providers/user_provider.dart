@@ -16,6 +16,9 @@ class UserProvider extends ChangeNotifier {
   // Carrega os dados do usuário salvos no dispositivo.
   void _loadUser() {
     _user = UserModel(
+      id:
+          prefs.getString('userID') ??
+          'default_user_id_123', // Adiciona um ID padrão
       name: prefs.getString('userName') ?? 'Kenny Roger',
       email: prefs.getString('userEmail') ?? 'webkennyroger@gmail.com',
       location: prefs.getString('userLocation') ?? 'Cuiabá, MT',
@@ -40,6 +43,7 @@ class UserProvider extends ChangeNotifier {
     _user = newUser;
 
     // Salva os dados no SharedPreferences
+    await prefs.setString('userID', newUser.id);
     await prefs.setString('userName', newUser.name);
     await prefs.setString('userEmail', newUser.email);
     await prefs.setString('userLocation', newUser.location);

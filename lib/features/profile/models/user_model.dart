@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 
 class UserModel {
+  String id;
   String name;
   String email;
   String location;
@@ -11,6 +12,7 @@ class UserModel {
   File? selectedImageFile; // Arquivo da nova imagem selecionada (da galeria)
 
   UserModel({
+    required this.id,
     required this.name,
     required this.email,
     required this.location,
