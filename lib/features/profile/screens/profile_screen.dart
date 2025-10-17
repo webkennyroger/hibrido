@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:ui'; // <--- NOVO: Import necessário para usar o ImageFilter.blur
+import 'dart:ui';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/profile/models/user_model.dart';
@@ -21,10 +21,10 @@ class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
+class ProfileScreenState extends State<ProfileScreen>
     with WidgetsBindingObserver {
   final ActivityRepository _repository = ActivityRepository();
   bool _isLoading = true;
@@ -35,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadProfileStats();
+    loadProfileStats();
   }
 
   @override
@@ -47,12 +47,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _loadProfileStats();
+      loadProfileStats();
     }
   }
 
   /// Carrega as atividades e calcula as estatísticas do perfil.
-  Future<void> _loadProfileStats() async {
+  Future<void> loadProfileStats() async {
     if (mounted) setState(() => _isLoading = true);
 
     final activities = await _repository.getActivities();
@@ -72,7 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   /// Lida com a ação de "puxar para atualizar".
   Future<void> _handleRefresh() async {
-    await _loadProfileStats();
+    await loadProfileStats();
   }
 
   @override
@@ -87,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       backgroundColor: colors.background,
       // NOVO: Adiciona o RefreshIndicator para permitir "puxar para atualizar".
       body: RefreshIndicator(
-        onRefresh: _handleRefresh,
+        onRefresh: loadProfileStats,
         child: CustomScrollView(
           slivers: [
             SliverAppBar(

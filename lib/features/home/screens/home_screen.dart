@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/activity/data/activity_repository.dart';
+import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
 import 'package:hibrido/features/settings/screens/account_settings_screen.dart';
 import 'package:hibrido/providers/user_provider.dart';
@@ -15,10 +17,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final PageController _pageController = PageController();
 
   DateTime _focusedDay = DateTime.now();
@@ -36,10 +38,23 @@ class _HomeScreenState extends State<HomeScreen> {
     'assets/images/spotify_placeholder.png',
   );
 
+  // --- Stats State ---
+  final ActivityRepository _activityRepository = ActivityRepository();
+  bool _isLoadingStats = true;
+  double _totalDistanceKm = 0.0;
+  Duration _totalDuration = Duration.zero;
+  double _averageSpeedKmh = 0.0;
+  double _totalCalories = 0.0;
+
   @override
   void initState() {
     super.initState();
     _listenToSpotifyPlayerState();
+    // NOVO: Carrega as estatísticas totais.
+    loadTotalStats();
+    // NOVO: Ouve as mudanças no ciclo de vida do app para atualizar os dados.
+    WidgetsBinding.instance.addObserver(this);
+
     _pageController.addListener(() {
       setState(() {
         // int _currentPage = _pageController.page!.round();
@@ -49,23 +64,60 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _playerStateSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
   /// Lida com a ação de "puxar para atualizar".
-  Future<void> _handleRefresh() async {
-    // Simula uma chamada de rede ou recarregamento de dados.
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> loadTotalStats() async {
+    if (mounted) setState(() => _isLoadingStats = true);
 
-    // Se você tiver dados que precisam ser recarregados (ex: de uma API),
-    // a lógica de recarregamento viria aqui.
+    final activities = await _activityRepository.getActivities();
+
+    double totalDistanceMeters = 0;
+    int totalDurationSeconds = 0;
+    double totalCalories = 0;
+
+    for (var activity in activities) {
+      totalDistanceMeters += activity.distanceInMeters;
+      totalDurationSeconds += activity.duration.inSeconds;
+      totalCalories += activity.calories;
+    }
+
+    double averageSpeedKmh = 0;
+    if (totalDurationSeconds > 0) {
+      averageSpeedKmh =
+          (totalDistanceMeters / 1000) / (totalDurationSeconds / 3600);
+    }
+
     if (mounted) {
       setState(() {
-        // Atualiza a UI se necessário após carregar os novos dados.
+        _totalDistanceKm = totalDistanceMeters / 1000;
+        _totalDuration = Duration(seconds: totalDurationSeconds);
+        _averageSpeedKmh = averageSpeedKmh;
+        _totalCalories = totalCalories;
+        _isLoadingStats = false;
       });
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Recarrega as estatísticas quando o app volta para o primeiro plano.
+    if (state == AppLifecycleState.resumed) {
+      loadTotalStats();
+    }
+  }
+
+  /// Formata a duração total para HH:MM:SS
+  String _formatTotalDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitHours = twoDigits(duration.inHours);
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$twoDigitHours:$twoDigitMinutes:$twoDigitSeconds";
   }
 
   /// Ouve as mudanças no estado do player do Spotify.
@@ -111,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           children: [
             RefreshIndicator(
-              onRefresh: _handleRefresh,
+              onRefresh: loadTotalStats,
               // SingleChildScrollView permite que o conteúdo da tela seja rolável se exceder o tamanho da tela.
               child: SingleChildScrollView(
                 physics:
@@ -407,48 +459,64 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Constrói a linha horizontal que contém os quatro cards de métricas.
   Widget _buildMetricsCards() {
     final colors = AppColors.of(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       children: [
-        // Expanded garante que cada card de métrica ocupe um espaço igual na linha.
-        Expanded(
-          child: _buildMetricsCard(
-            color: colors.surface,
-            icon: Icons.directions_run,
-            iconColor: AppColors.primary,
-            title: '6,28',
-            value: 'KM',
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: _isLoadingStats
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildMetricsCard(
+                      color: colors.surface,
+                      icon: Icons.directions_run,
+                      iconColor: AppColors.primary,
+                      title: _totalDistanceKm.toStringAsFixed(2),
+                      value: 'KM',
+                    ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _isLoadingStats
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildMetricsCard(
+                      color: colors.surface,
+                      icon: Icons.schedule,
+                      iconColor: AppColors.primary,
+                      title: _formatTotalDuration(_totalDuration),
+                      value: 'TEMPO',
+                    ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildMetricsCard(
-            color: colors.surface,
-            icon: Icons.schedule,
-            iconColor: AppColors.primary,
-            title: '50:14',
-            value: 'TEMPO',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildMetricsCard(
-            color: colors.surface,
-            icon: Icons.speed,
-            iconColor: AppColors.primary,
-            title: '5.19',
-            value: 'VELOCIDADE',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildMetricsCard(
-            color: colors.surface,
-            icon: Icons.local_fire_department,
-            iconColor: AppColors.primary,
-            title: '454',
-            value: 'CALORIAS',
-          ),
+        const SizedBox(height: 10), // Espaço entre as linhas
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: _isLoadingStats
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildMetricsCard(
+                      color: colors.surface,
+                      icon: Icons.speed,
+                      iconColor: AppColors.primary,
+                      title: _averageSpeedKmh.toStringAsFixed(2),
+                      value: 'KM/H',
+                    ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _isLoadingStats
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildMetricsCard(
+                      color: colors.surface,
+                      icon: Icons.local_fire_department,
+                      iconColor: AppColors.primary,
+                      title: _totalCalories.toStringAsFixed(0),
+                      value: 'CALORIAS',
+                    ),
+            ),
+          ],
         ),
       ],
     );

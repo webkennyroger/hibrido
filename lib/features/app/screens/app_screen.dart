@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/home/screens/home_screen.dart';
 import 'package:hibrido/features/activity/screens/activity_screen.dart';
 import 'package:hibrido/features/chat/screens/chat_screen.dart';
-import 'package:hibrido/features/home/screens/home_screen.dart';
 import 'package:hibrido/features/map/screens/map_screen.dart';
-import 'package:hibrido/features/profile/screens/profile_screen.dart';
+import 'package:hibrido/features/profile/screens/profile_screen.dart'
+    show ProfileScreen, ProfileScreenState;
 import 'package:hibrido/features/activity/screens/activity_screen.dart'
     show ActivityScreenState;
 
@@ -25,17 +26,21 @@ class _AppScreenState extends State<AppScreen> {
   // NOVO: Chave para acessar o estado da ActivityScreen
   final GlobalKey<ActivityScreenState> _activityScreenKey =
       GlobalKey<ActivityScreenState>();
+  final GlobalKey<ProfileScreenState> _profileScreenKey =
+      GlobalKey<ProfileScreenState>();
+  final GlobalKey<HomeScreenState> _homeScreenKey =
+      GlobalKey<HomeScreenState>();
 
   @override
   void initState() {
     super.initState();
     // Inicializamos a lista de telas aqui para poder passar o callback para a ProfileScreen.
     _screens = [
-      const HomeScreen(),
+      HomeScreen(key: _homeScreenKey),
       // NOVO: Passa a chave para a ActivityScreen
       ActivityScreen(key: _activityScreenKey),
       const ChatScreen(),
-      const ProfileScreen(),
+      ProfileScreen(key: _profileScreenKey),
     ];
   }
 
@@ -218,6 +223,13 @@ class _AppScreenState extends State<AppScreen> {
       onTap: () {
         setState(() {
           _selectedIndex = index;
+          if (index == 0) {
+            _homeScreenKey.currentState?.loadTotalStats();
+          } else if (index == 1) {
+            _activityScreenKey.currentState?.reloadActivities();
+          } else if (index == 3) {
+            _profileScreenKey.currentState?.loadProfileStats();
+          }
         });
       },
       // O corpo visual do item de navegação.
