@@ -7,12 +7,9 @@ import 'package:intl/intl.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/core/utils/sport_utils.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:image_picker/image_picker.dart';
-
-/// Enum para as opções de esporte.
-/// O ideal seria mover isso para um arquivo compartilhado, mas por enquanto ficará aqui.
-enum SportOption { corrida, pedalada, caminhada }
 
 /// Enum para as opções de privacidade.
 enum PrivacyOption { public, followers, private }
@@ -54,14 +51,14 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   late TextEditingController _titleController;
   late TextEditingController _notesController;
   // Mock data para campos novos:
-  PrivacyOption _selectedPrivacy = PrivacyOption.public;
+  late PrivacyOption _selectedPrivacy;
   int _partnersCount = 0;
   int? _selectedMoodIndex;
   late SportOption _selectedSport;
 
   // NOVO: Estado para gerenciar o tipo de mapa.
-  MapType _currentMapType = MapType.normal;
-  MapTypeOption _selectedMapTypeOption = MapTypeOption.normal;
+  late MapType _currentMapType;
+  late MapTypeOption _selectedMapTypeOption;
 
   // NOVO: Estado para armazenar as imagens selecionadas.
   final List<File> _selectedMedia = [];
@@ -99,8 +96,13 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     _notesController = TextEditingController(
       text: widget.activityData.notes ?? '',
     );
-    _selectedSport = _sportFromString(widget.activityData.sport);
+    _selectedSport = sportFromString(widget.activityData.sport);
     _selectedMoodIndex = widget.activityData.mood;
+    _selectedPrivacy = _privacyFromString(widget.activityData.privacy);
+    _currentMapType = _mapTypeFromString(widget.activityData.mapType);
+    _selectedMapTypeOption = _mapTypeOptionFromString(
+      widget.activityData.mapType,
+    );
 
     // Preenche os parceiros marcados
     _selectedPartnerIds.addAll(widget.activityData.taggedPartnerIds);
@@ -123,41 +125,43 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
 
   // --- Funções Auxiliares ---
 
-  // Converte uma string de título para o enum SportOption
-  SportOption _sportFromString(String title) {
-    switch (title.toLowerCase()) {
-      case 'pedalada':
-        return SportOption.pedalada;
-      case 'caminhada':
-        return SportOption.caminhada;
-      case 'corrida':
+  MapType _mapTypeFromString(String mapType) {
+    switch (mapType.toLowerCase()) {
+      case 'satellite':
+        return MapType.satellite;
+      case 'hybrid':
+        return MapType.hybrid;
+      case 'terrain':
+        return MapType.terrain;
+      case 'none':
+        return MapType.none;
+      case 'normal':
       default:
-        return SportOption.corrida;
+        return MapType.normal;
     }
   }
 
-  // Mapeia o enum do esporte para uma string de rótulo.
-  String _getSportLabel(SportOption option) {
-    switch (option) {
-      case SportOption.corrida:
-        return 'Corrida';
-      case SportOption.pedalada:
-        return 'Pedalada';
-      case SportOption.caminhada:
-        return 'Caminhada';
+  String _mapTypeToString(MapType mapType) {
+    return mapType.toString().split('.').last;
+  }
+
+  MapTypeOption _mapTypeOptionFromString(String mapType) {
+    switch (mapType.toLowerCase()) {
+      case 'satellite':
+        return MapTypeOption.satellite;
+      case 'hybrid':
+        return MapTypeOption.hybrid;
+      case 'normal':
+      default:
+        return MapTypeOption.normal;
     }
   }
 
-  // Mapeia o enum do esporte para o ícone de marcação
-  IconData _getSportIcon(SportOption option) {
-    switch (option) {
-      case SportOption.corrida:
-        return Icons.directions_run;
-      case SportOption.pedalada:
-        return Icons.directions_bike;
-      case SportOption.caminhada:
-        return Icons.directions_walk;
-    }
+  PrivacyOption _privacyFromString(String privacy) {
+    return PrivacyOption.values.firstWhere(
+      (e) => e.toString().split('.').last == privacy,
+      orElse: () => PrivacyOption.public,
+    );
   }
 
   // Função para gerar um título padrão com base no período do dia.
@@ -440,14 +444,14 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
           child: Row(
             children: [
               Icon(
-                _getSportIcon(_selectedSport),
-                color: AppColors.primary,
+                getSportIcon(_selectedSport),
+                color: getSportColor(_selectedSport),
                 size: 24,
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  _getSportLabel(_selectedSport),
+                  getSportLabel(_selectedSport),
                   style: GoogleFonts.lexend(
                     color: colors.text,
                     fontSize: 16,
@@ -495,9 +499,12 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
               // Itera sobre as opções de esporte e cria um botão para cada
               for (var sport in SportOption.values)
                 ListTile(
-                  leading: Icon(_getSportIcon(sport), color: AppColors.primary),
+                  leading: Icon(
+                    getSportIcon(sport),
+                    color: getSportColor(sport),
+                  ),
                   title: Text(
-                    _getSportLabel(sport),
+                    getSportLabel(sport),
                     style: GoogleFonts.lexend(color: colors.text),
                   ),
                   onTap: () {
@@ -505,7 +512,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                     Navigator.pop(context);
                   },
                   trailing: _selectedSport == sport
-                      ? const Icon(Icons.check, color: AppColors.primary)
+                      ? Icon(Icons.check, color: getSportColor(sport))
                       : null,
                 ),
             ],
@@ -591,6 +598,74 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  String _getPrivacyLabel(PrivacyOption option) {
+    switch (option) {
+      case PrivacyOption.public:
+        return 'Público';
+      case PrivacyOption.followers:
+        return 'Apenas Seguidores';
+      case PrivacyOption.private:
+        return 'Privado';
+    }
+  }
+
+  IconData _getPrivacyIcon(PrivacyOption option) {
+    switch (option) {
+      case PrivacyOption.public:
+        return Icons.public;
+      case PrivacyOption.followers:
+        return Icons.group;
+      case PrivacyOption.private:
+        return Icons.lock;
+    }
+  }
+
+  void _showPrivacySelectorModal(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Escolha a Visibilidade',
+                style: GoogleFonts.lexend(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colors.text,
+                ),
+              ),
+              const SizedBox(height: 20),
+              for (var privacy in PrivacyOption.values)
+                ListTile(
+                  leading: Icon(_getPrivacyIcon(privacy), color: colors.text),
+                  title: Text(
+                    _getPrivacyLabel(privacy),
+                    style: GoogleFonts.lexend(color: colors.text),
+                  ),
+                  onTap: () {
+                    setState(() => _selectedPrivacy = privacy);
+                    Navigator.pop(context);
+                  },
+                  trailing: _selectedPrivacy == privacy
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
+                ),
+            ],
+          ),
         );
       },
     );
@@ -1053,6 +1128,13 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
             _buildSportSelectorRow(), // Seletor de tipo de atividade
             const SizedBox(height: 32),
             _buildInfoRow(
+              Icons.lock_outline,
+              'Visibilidade',
+              _getPrivacyLabel(_selectedPrivacy),
+              () => _showPrivacySelectorModal(context),
+            ),
+            const SizedBox(height: 24),
+            _buildInfoRow(
               Icons.group,
               'Parceiros de Atividade',
               '$_partnersCount',
@@ -1083,7 +1165,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                 String finalTitle = _titleController.text.trim();
                 if (finalTitle.isEmpty) {
                   // Se o título estiver vazio, usa o nome do esporte como título.
-                  finalTitle = _getSportLabel(_selectedSport);
+                  finalTitle = getSportLabel(_selectedSport);
                 }
 
                 final finalActivityData = widget.activityData.copyWith(
@@ -1092,12 +1174,13 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                   calories: widget.activityData.calories,
                   routePoints: widget.activityData.routePoints,
                   activityTitle: finalTitle,
-                  sport: _getSportLabel(_selectedSport),
+                  sport: getSportLabel(_selectedSport),
                   mood: _selectedMoodIndex,
                   privacy: _privacyOptionToString(_selectedPrivacy),
                   notes: _notesController.text.trim(),
                   taggedPartnerIds: _selectedPartnerIds.toList(),
                   mediaPaths: _selectedMedia.map((file) => file.path).toList(),
+                  mapType: _mapTypeToString(_currentMapType),
                 );
                 widget.onSaveAndNavigate(finalActivityData);
               },
@@ -1113,13 +1196,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   Widget _buildMoodSelector() {
     final colors = AppColors.of(context);
 
-    final List<IconData> moodIcons = [
-      Icons.sentiment_very_dissatisfied,
-      Icons.sentiment_dissatisfied,
-      Icons.sentiment_neutral,
-      Icons.sentiment_satisfied,
-      Icons.sentiment_very_satisfied,
-    ];
+    final List<String> moodEmojis = ['😝', '😒', '😐', '😊', '😁'];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -1137,19 +1214,21 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(moodIcons.length, (index) {
+            children: List.generate(moodEmojis.length, (index) {
               return GestureDetector(
                 onTap: () {
                   setState(() {
                     _selectedMoodIndex = index;
                   });
                 },
-                child: Icon(
-                  moodIcons[index],
-                  color: _selectedMoodIndex == index
-                      ? AppColors.primary
-                      : colors.textSecondary,
-                  size: 36,
+                child: Text(
+                  moodEmojis[index],
+                  style: TextStyle(
+                    fontSize: 36,
+                    color: _selectedMoodIndex == index
+                        ? AppColors.primary
+                        : colors.textSecondary,
+                  ),
                 ),
               );
             }),

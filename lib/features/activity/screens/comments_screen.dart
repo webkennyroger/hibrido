@@ -38,14 +38,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
   final TextEditingController _commentController = TextEditingController();
   GoogleMapController? _mapController;
   bool _isPostButtonEnabled = false;
-  late List<String> _comments;
   final ActivityRepository _repository = ActivityRepository();
-  // Mock data para a lista de quem curtiu
+
+  // Mock data para a lista de quem curtiu (para fins de design)
   final List<Liker> _likers = [
     Liker(name: 'Você', avatarUrl: 'https://i.ibb.co/L8Gj18j/avatar.png'),
     Liker(name: 'Maria Oliveira', avatarUrl: 'https://i.pravatar.cc/150?img=2'),
     Liker(name: 'Carlos Souza', avatarUrl: 'https://i.pravatar.cc/150?img=3'),
-    // Adicione mais pessoas aqui
+    Liker(name: 'Ana Pereira', avatarUrl: 'https://i.pravatar.cc/150?img=4'),
   ];
 
   // Lista de parceiros mock para demonstração.
@@ -76,7 +76,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
         _isPostButtonEnabled = _commentController.text.trim().isNotEmpty;
       });
     });
-    _comments = List<String>.from(widget.activityData.commentsList);
   }
 
   @override
@@ -90,12 +89,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
   void _postComment() {
     if (_commentController.text.trim().isEmpty) return;
 
-    setState(() {
-      _comments.add(
-        _commentController.text.trim(),
-      ); // Adiciona no final da lista
-    });
+    // Cria uma nova lista de comentários adicionando o novo.
+    final _comments = List<String>.from(widget.activityData.commentsList)
+      ..add(_commentController.text.trim());
 
+    // Atualiza a atividade com a nova lista de comentários.
     final updatedActivity = widget.activityData.copyWith(
       commentsList: _comments,
     );
@@ -103,6 +101,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
     _commentController.clear();
     FocusScope.of(context).unfocus(); // Esconde o teclado
+
+    // Força a reconstrução da UI para mostrar o novo comentário.
+    // O ideal seria que a tela pai passasse um callback de atualização.
+    setState(() {});
   }
 
   // --- Funções Auxiliares de Formatação ---
@@ -140,6 +142,19 @@ class _CommentsScreenState extends State<CommentsScreen> {
     final timePart = DateFormat('HH:mm').format(activityDate);
 
     return '$datePart às $timePart';
+  }
+
+  /// Converte a string do tipo de mapa para o enum MapType do Google Maps.
+  MapType _mapTypeFromString(String? mapType) {
+    switch (mapType?.toLowerCase()) {
+      case 'satellite':
+        return MapType.satellite;
+      case 'hybrid':
+        return MapType.hybrid;
+      case 'normal':
+      default:
+        return MapType.normal;
+    }
   }
 
   @override
@@ -262,6 +277,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(15),
                             child: GoogleMap(
+                              mapType: _mapTypeFromString(
+                                widget.activityData.mapType,
+                              ),
                               onMapCreated: (controller) {
                                 _mapController = controller;
                                 if (widget
@@ -305,16 +323,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           const SizedBox(height: 16),
                           _buildMediaSection(),
                         ],
-                        // NOVO: Seção de Parceiros
-                        _buildPartnersSection(colors),
-                        const SizedBox(height: 24),
-                        _buildLikesSection(colors),
+                        // NOVO: Linha com informações sociais (Parceiros e Curtidas)
+                        _buildSocialInfoRow(colors),
                         const SizedBox(height: 12),
                         Divider(height: 1, color: colors.text.withOpacity(0.1)),
                       ],
                     ),
                   ),
-                  _comments.isEmpty
+                  widget.activityData.commentsList.isEmpty
                       ? const Padding(
                           padding: EdgeInsets.symmetric(vertical: 80.0),
                           child: Center(
@@ -328,7 +344,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           padding: const EdgeInsets.all(16),
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _comments.length,
+                          itemCount: widget.activityData.commentsList.length,
                           itemBuilder: (context, index) {
                             return ListTile(
                               leading: const CircleAvatar(
@@ -337,7 +353,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                 ),
                               ),
                               title: Text(
-                                _comments[index],
+                                widget.activityData.commentsList[index],
                                 style: TextStyle(color: colors.text),
                               ),
                             );
@@ -382,20 +398,46 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   /// Constrói o display do humor selecionado.
   Widget _buildMoodDisplay(AppColors colors) {
-    final List<IconData> moodIcons = [
-      Icons.sentiment_very_dissatisfied,
-      Icons.sentiment_dissatisfied,
-      Icons.sentiment_neutral,
-      Icons.sentiment_satisfied,
-      Icons.sentiment_very_satisfied,
-    ];
+    final List<String> moodEmojis = ['😝', '😒', '😐', '😊', '😁'];
+    final List<String> moodLabels = ['Dolorido', 'Mau', 'Ok', 'Bom', 'Otimo'];
 
-    return Row(
+    // Garante que o índice de humor seja válido.
+    if (widget.activityData.mood == null ||
+        widget.activityData.mood! < 0 ||
+        widget.activityData.mood! >= moodEmojis.length) {
+      return const SizedBox.shrink(); // Não mostra nada se o humor for inválido.
+    }
+
+    final selectedMoodIndex = widget.activityData.mood!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          moodIcons[widget.activityData.mood!],
-          color: AppColors.primary,
-          size: 20,
+        Text(
+          'Como foi essa corrida?',
+          style: GoogleFonts.lexend(
+            color: colors.text,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              moodLabels[selectedMoodIndex],
+              style: GoogleFonts.lexend(
+                color: colors.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              moodEmojis[selectedMoodIndex],
+              style: const TextStyle(fontSize: 24),
+            ),
+          ],
         ),
       ],
     );
@@ -547,6 +589,23 @@ class _CommentsScreenState extends State<CommentsScreen> {
     );
   }
 
+  /// NOVO: Constrói a linha que agrupa as informações sociais (parceiros e curtidas).
+  Widget _buildSocialInfoRow(AppColors colors) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Seção de Parceiros (ocupa o espaço necessário)
+          _buildPartnersSection(colors),
+          // Seção de Curtidas (alinhada à direita)
+          _buildLikesSection(colors),
+        ],
+      ),
+    );
+  }
+
   /// Constrói a seção que mostra os parceiros marcados.
   Widget _buildPartnersSection(AppColors colors) {
     // Filtra a lista de parceiros mock para encontrar os que foram marcados.
@@ -555,87 +614,91 @@ class _CommentsScreenState extends State<CommentsScreen> {
         .toList();
 
     if (taggedPartners.isEmpty) {
-      return const SizedBox.shrink(); // Não mostra nada se não houver parceiros
+      // NOVO: Mostra uma mensagem quando não há parceiros.
+      return Row(
+        children: [
+          Icon(Icons.group_off_outlined, color: colors.textSecondary, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            'Ninguém marcado',
+            style: GoogleFonts.lexend(
+              color: colors.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.group, color: colors.textSecondary, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                'Com ',
-                style: GoogleFonts.lexend(
-                  color: colors.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
-              // Mapeia a lista de parceiros para widgets de texto em negrito
-              ...List.generate(taggedPartners.length, (index) {
-                final partner = taggedPartners[index];
-                return Text(
-                  // Adiciona vírgula e "e" conforme necessário
-                  '${partner.name}${index < taggedPartners.length - 2
-                      ? ', '
-                      : index == taggedPartners.length - 2
-                      ? ' e '
-                      : ''}',
-                  style: GoogleFonts.lexend(
-                    color: colors.text,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                );
-              }),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
+    // Mostra os parceiros marcados.
+    return Row(
+      children: [
+        Icon(Icons.group, color: colors.textSecondary, size: 16),
+        const SizedBox(width: 8),
+        Text(
+          'Com ',
+          style: GoogleFonts.lexend(color: colors.textSecondary, fontSize: 14),
+        ),
+        // Mapeia a lista de parceiros para widgets de texto em negrito
+        ...List.generate(taggedPartners.length, (index) {
+          final partner = taggedPartners[index];
+          return Text(
+            // Adiciona vírgula e "e" conforme necessário
+            '${partner.name}${index < taggedPartners.length - 2
+                ? ', '
+                : index == taggedPartners.length - 2
+                ? ' e '
+                : ''}',
+            style: GoogleFonts.lexend(
+              color: colors.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          );
+        }),
+      ],
     );
   }
 
   /// Constrói a seção que mostra quem curtiu a atividade.
   Widget _buildLikesSection(AppColors colors) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    if (widget.activityData.likes <= 0) {
+      return const SizedBox.shrink(); // Não mostra nada se não houver curtidas
+    }
+
+    // Pega no máximo 3 avatares da lista de exemplo
+    final likersToShow = _likers.take(3).toList();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          'Curtidas',
-          style: GoogleFonts.lexend(
-            color: colors.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+        // Stack para empilhar os avatares
+        SizedBox(
+          width: 32.0 + (likersToShow.length - 1) * 22.0, // Largura dinâmica
+          height: 32,
+          child: Stack(
+            children: List.generate(likersToShow.length, (index) {
+              return Positioned(
+                left: index * 22.0, // Deslocamento para empilhar
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundImage: NetworkImage(likersToShow[index].avatarUrl),
+                  // Adiciona uma borda para separar os avatares
+                  backgroundColor: colors.surface,
+                ),
+              );
+            }),
           ),
         ),
-        const SizedBox(height: 12),
-        // Lista de pessoas que curtiram
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _likers.length,
-          itemBuilder: (context, index) {
-            final liker = _likers[index];
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundImage: NetworkImage(liker.avatarUrl),
-              ),
-              title: Text(
-                liker.name,
-                style: GoogleFonts.lexend(
-                  color: colors.text,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              // Você pode adicionar um botão de "Seguir" aqui se quiser
-            );
-          },
-          separatorBuilder: (context, index) => const SizedBox(height: 8),
+        const SizedBox(width: 12),
+        // Texto com o número total de curtidas
+        Text(
+          '${widget.activityData.likes} curtidas',
+          style: GoogleFonts.lexend(
+            color: colors.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );

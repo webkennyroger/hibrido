@@ -21,6 +21,7 @@ class ActivityData {
   final List<String> taggedPartnerIds;
   final int? mood;
   final List<String> mediaPaths; // Renomeado de imagePaths
+  final String mapType;
 
   ActivityData({
     required this.id,
@@ -42,6 +43,7 @@ class ActivityData {
     this.taggedPartnerIds = const [],
     this.mood,
     this.mediaPaths = const [],
+    this.mapType = 'normal',
   }) : commentsList = commentsList ?? [];
 
   // Método para criar uma cópia do objeto com alguns valores alterados.
@@ -61,6 +63,7 @@ class ActivityData {
     bool? isLiked,
     List<String>? commentsList,
     List<String>? mediaPaths,
+    String? mapType,
   }) {
     return ActivityData(
       id: id ?? this.id, // Preserva o ID original
@@ -82,6 +85,7 @@ class ActivityData {
       taggedPartnerIds: taggedPartnerIds ?? this.taggedPartnerIds,
       mood: mood ?? this.mood,
       mediaPaths: mediaPaths ?? this.mediaPaths,
+      mapType: mapType ?? this.mapType,
     );
   }
 
@@ -109,6 +113,7 @@ class ActivityData {
       'taggedPartnerIds': taggedPartnerIds,
       'mood': mood,
       'mediaPaths': mediaPaths,
+      'mapType': mapType,
     };
   }
 
@@ -144,6 +149,7 @@ class ActivityData {
       taggedPartnerIds: List<String>.from(json['taggedPartnerIds'] ?? []),
       mood: json['mood'],
       mediaPaths: List<String>.from(json['mediaPaths'] ?? []),
+      mapType: json['mapType'] ?? 'normal',
     );
   }
 }

@@ -48,6 +48,19 @@ class _ActivityCardState extends State<ActivityCard> {
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
+  // Converte a string do tipo de mapa para o enum MapType do Google Maps.
+  MapType _mapTypeFromString(String? mapType) {
+    switch (mapType?.toLowerCase()) {
+      case 'satellite':
+        return MapType.satellite;
+      case 'hybrid':
+        return MapType.hybrid;
+      case 'normal':
+      default:
+        return MapType.normal;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -461,6 +474,7 @@ class _ActivityCardState extends State<ActivityCard> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
           child: GoogleMap(
+            mapType: _mapTypeFromString(widget.activityData.mapType),
             initialCameraPosition: CameraPosition(
               target: widget.activityData.routePoints.isNotEmpty
                   ? widget.activityData.routePoints.first
@@ -537,6 +551,7 @@ class _ActivityCardState extends State<ActivityCard> {
         height: 120,
         color: Colors.grey.shade300,
         child: GoogleMap(
+          mapType: _mapTypeFromString(widget.activityData.mapType),
           initialCameraPosition: CameraPosition(
             target: widget.activityData.routePoints.isNotEmpty
                 ? widget.activityData.routePoints.first

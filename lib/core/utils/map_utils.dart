@@ -31,3 +31,19 @@ extension LatLngBoundsUtils on LatLngBounds {
     return LatLngBounds(northeast: LatLng(x1, y1), southwest: LatLng(x0, y0));
   }
 }
+
+MapType mapTypeFromString(String mapType) {
+  switch (mapType) {
+    case 'satellite':
+      return MapType.satellite;
+    case 'hybrid':
+      return MapType.hybrid;
+    case 'terrain':
+      return MapType.terrain;
+    case 'none':
+      return MapType.none;
+    case 'normal':
+    default:
+      return MapType.normal;
+  }
+}
