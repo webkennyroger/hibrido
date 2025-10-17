@@ -5,6 +5,7 @@ class AppColors {
   // Cores primárias e de destaque que geralmente não mudam com o tema.
   static const Color primary = Color(0xFFbef202); // Verde-limão
   static const Color error = Color(0xFFFF0000); // Vermelho para erros
+  static const Color success = Color(0xFF28a745); // Verde para sucesso
   static const Color warning = Color(0xFFFFA600); // Laranja para avisos
   static const Color info = Color(0xFF0077B6); // Azul para informações
 

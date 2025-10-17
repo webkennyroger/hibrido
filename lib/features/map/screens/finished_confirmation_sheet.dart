@@ -625,6 +625,17 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     }
   }
 
+  Color _getPrivacyColor(PrivacyOption option) {
+    switch (option) {
+      case PrivacyOption.public:
+        return AppColors.success;
+      case PrivacyOption.followers:
+        return AppColors.warning;
+      case PrivacyOption.private:
+        return AppColors.error;
+    }
+  }
+
   void _showPrivacySelectorModal(BuildContext context) {
     final colors = AppColors.of(context);
 
@@ -651,7 +662,10 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
               const SizedBox(height: 20),
               for (var privacy in PrivacyOption.values)
                 ListTile(
-                  leading: Icon(_getPrivacyIcon(privacy), color: colors.text),
+                  leading: Icon(
+                    _getPrivacyIcon(privacy),
+                    color: _getPrivacyColor(privacy),
+                  ),
                   title: Text(
                     _getPrivacyLabel(privacy),
                     style: GoogleFonts.lexend(color: colors.text),
@@ -661,7 +675,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                     Navigator.pop(context);
                   },
                   trailing: _selectedPrivacy == privacy
-                      ? const Icon(Icons.check, color: AppColors.primary)
+                      ? Icon(Icons.check, color: _getPrivacyColor(privacy))
                       : null,
                 ),
             ],
@@ -713,7 +727,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
             child: OutlinedButton(
               onPressed: () => _showMapTypeSelectorModal(context),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary, width: 1.5),
+                side: const BorderSide(color: AppColors.success, width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -721,7 +735,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
               child: Text(
                 'Alterar tipo de mapa',
                 style: GoogleFonts.lexend(
-                  color: AppColors.primary,
+                  color: AppColors.success,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -818,9 +832,9 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   /// NOVO: Card para adicionar nova foto.
   Widget _buildAddMediaCard() {
     return GestureDetector(
-      onTap: () => _showMediaSourceActionSheet(context),
+      onTap: () => _pickMedia(ImageSource.gallery, isVideo: false),
       child: DottedBorder(
-        color: AppColors.primary,
+        color: AppColors.success,
         strokeWidth: 2,
         radius: const Radius.circular(12),
         borderType: BorderType.RRect,
@@ -833,14 +847,14 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
             children: [
               const Icon(
                 Icons.camera_alt_outlined,
-                color: AppColors.primary,
+                color: AppColors.success,
                 size: 32,
               ),
               const SizedBox(height: 8),
               Text(
                 'Adicionar mídia',
                 style: GoogleFonts.lexend(
-                  color: AppColors.primary,
+                  color: AppColors.success,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1074,7 +1088,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                   child: _buildMetricsCard(
                     color: colors.surface,
                     icon: Icons.directions_run,
-                    iconColor: AppColors.primary,
+                    iconColor: AppColors.success,
                     title: distance,
                     value: 'KM',
                   ),
@@ -1094,7 +1108,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                   child: _buildMetricsCard(
                     color: colors.surface,
                     icon: Icons.speed,
-                    iconColor: AppColors.primary,
+                    iconColor: AppColors.warning,
                     title: speed,
                     value: 'KM/H',
                   ),
@@ -1104,7 +1118,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                   child: _buildMetricsCard(
                     color: colors.surface,
                     icon: Icons.local_fire_department,
-                    iconColor: AppColors.primary,
+                    iconColor: AppColors.error,
                     title: calories,
                     value: 'CALORIAS',
                   ),
@@ -1128,10 +1142,11 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
             _buildSportSelectorRow(), // Seletor de tipo de atividade
             const SizedBox(height: 32),
             _buildInfoRow(
-              Icons.lock_outline,
+              _getPrivacyIcon(_selectedPrivacy),
               'Visibilidade',
               _getPrivacyLabel(_selectedPrivacy),
               () => _showPrivacySelectorModal(context),
+              iconColor: _getPrivacyColor(_selectedPrivacy),
             ),
             const SizedBox(height: 24),
             _buildInfoRow(
@@ -1196,7 +1211,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   Widget _buildMoodSelector() {
     final colors = AppColors.of(context);
 
-    final List<String> moodEmojis = ['😝', '😒', '😐', '😊', '😁'];
+    final List<String> moodEmojis = ['😖', '😒', '😐', '😊', '😁'];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -1215,19 +1230,43 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(moodEmojis.length, (index) {
+              final isSelected = _selectedMoodIndex == index;
               return GestureDetector(
                 onTap: () {
                   setState(() {
                     _selectedMoodIndex = index;
                   });
                 },
-                child: Text(
-                  moodEmojis[index],
-                  style: TextStyle(
-                    fontSize: 36,
-                    color: _selectedMoodIndex == index
-                        ? AppColors.primary
-                        : colors.textSecondary,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  padding: EdgeInsets.all(isSelected ? 8.0 : 4.0),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withOpacity(0.15)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.2),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Transform.scale(
+                    scale: isSelected ? 1.2 : 1.0,
+                    child: Text(
+                      moodEmojis[index],
+                      style: TextStyle(
+                        fontSize: 32,
+                        color: isSelected
+                            ? AppColors.primary
+                            : colors.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -1243,8 +1282,9 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     IconData icon,
     String label,
     String value,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    Color? iconColor,
+  }) {
     final colors = AppColors.of(context);
 
     return GestureDetector(
@@ -1253,7 +1293,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
         padding: const EdgeInsets.only(bottom: 24, left: 12, right: 12),
         child: Row(
           children: [
-            Icon(icon, color: colors.text, size: 24),
+            Icon(icon, color: iconColor ?? colors.text, size: 24),
             const SizedBox(width: 16),
             Expanded(
               child: Text(

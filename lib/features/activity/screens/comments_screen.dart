@@ -168,7 +168,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
         backgroundColor: colors.surface,
         elevation: 1,
         leading: IconButton(
-          icon: Icon(Icons.close, color: colors.text),
+          icon: Icon(Icons.close, color: AppColors.error),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -190,7 +190,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               'Postar',
               style: GoogleFonts.lexend(
                 color: _isPostButtonEnabled
-                    ? AppColors.primary
+                    ? AppColors.success
                     : Colors.grey.shade400,
                 fontWeight: FontWeight.bold,
               ),
@@ -398,7 +398,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   /// Constrói o display do humor selecionado.
   Widget _buildMoodDisplay(AppColors colors) {
-    final List<String> moodEmojis = ['😝', '😒', '😐', '😊', '😁'];
+    final List<String> moodEmojis = ['😖', '😒', '😐', '😊', '😁'];
     final List<String> moodLabels = ['Dolorido', 'Mau', 'Ok', 'Bom', 'Otimo'];
 
     // Garante que o índice de humor seja válido.
@@ -413,6 +413,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Divider(height: 1),
+        const SizedBox(height: 16),
         Text(
           'Como foi essa corrida?',
           style: GoogleFonts.lexend(
@@ -421,24 +423,40 @@ class _CommentsScreenState extends State<CommentsScreen> {
             fontSize: 16,
           ),
         ),
-        const SizedBox(height: 5),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               moodLabels[selectedMoodIndex],
               style: GoogleFonts.lexend(
-                color: colors.text,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+                color: colors.textSecondary,
+                fontSize: 14,
               ),
             ),
-            Text(
-              moodEmojis[selectedMoodIndex],
-              style: const TextStyle(fontSize: 24),
+            // NOVO: Container para estilizar o emoji com fundo e sombra.
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.15),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Text(
+                moodEmojis[selectedMoodIndex],
+                style: TextStyle(fontSize: 24, color: AppColors.primary),
+              ),
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        const Divider(height: 1),
       ],
     );
   }

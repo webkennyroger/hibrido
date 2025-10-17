@@ -12,6 +12,7 @@ import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hibrido/core/utils/map_utils.dart';
+import 'package:hibrido/core/utils/sport_utils.dart';
 import 'package:hibrido/widgets/full_screen_media_viewer.dart';
 
 // Enum para as opções de privacidade, para manter a consistência.
@@ -163,19 +164,6 @@ class _ActivityCardState extends State<ActivityCard> {
     );
   }
 
-  // Mapeia o esporte para o ícone correspondente.
-  IconData _getSportIcon(String sport) {
-    switch (sport.toLowerCase()) {
-      case 'pedalada':
-        return Icons.directions_bike;
-      case 'caminhada':
-        return Icons.directions_walk;
-      case 'corrida':
-      default:
-        return Icons.directions_run;
-    }
-  }
-
   Widget _buildHeader(BuildContext context) {
     final colors = AppColors.of(context);
     final user = context.watch<UserProvider>().user;
@@ -197,9 +185,12 @@ class _ActivityCardState extends State<ActivityCard> {
               ),
               Row(
                 children: [
+                  // NOVO: Usa as funções de utilidade para obter ícone e cor corretos.
                   Icon(
-                    _getSportIcon(widget.activityData.sport),
-                    color: AppColors.primary,
+                    getSportIcon(sportFromString(widget.activityData.sport)),
+                    color: getSportColor(
+                      sportFromString(widget.activityData.sport),
+                    ),
                     size: 16,
                   ),
                   const SizedBox(width: 4),
