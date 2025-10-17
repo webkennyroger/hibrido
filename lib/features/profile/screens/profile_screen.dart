@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui'; // <--- NOVO: Import necessário para usar o ImageFilter.blur
+import 'package:hibrido/features/activity/data/activity_repository.dart';
+import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/profile/models/user_model.dart';
 import 'package:hibrido/features/profile/screens/edit_profile_screen.dart';
 import 'package:hibrido/features/activity/screens/activity_screen.dart';
@@ -22,20 +24,55 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  /// Lida com a ação de "puxar para atualizar".
-  Future<void> _handleRefresh() async {
-    // Simula uma chamada de rede para atualizar os dados do usuário.
-    await Future.delayed(const Duration(seconds: 1));
+class _ProfileScreenState extends State<ProfileScreen>
+    with WidgetsBindingObserver {
+  final ActivityRepository _repository = ActivityRepository();
+  bool _isLoading = true;
+  int _activitiesCount = 0;
+  double _totalDistanceKm = 0.0;
 
-    // Em um aplicativo real, você poderia recarregar os dados do provedor/repositório.
-    // Exemplo: context.read<UserProvider>().fetchUser();
-    // Por enquanto, apenas chamamos setState para indicar que a atualização terminou.
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadProfileStats();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadProfileStats();
+    }
+  }
+
+  /// Carrega as atividades e calcula as estatísticas do perfil.
+  Future<void> _loadProfileStats() async {
+    if (mounted) setState(() => _isLoading = true);
+
+    final activities = await _repository.getActivities();
+    double totalDistance = 0;
+    for (var activity in activities) {
+      totalDistance += activity.distanceInMeters;
+    }
+
     if (mounted) {
       setState(() {
-        // Isso acionará uma reconstrução, atualizando os dados do provedor.
+        _activitiesCount = activities.length;
+        _totalDistanceKm = totalDistance / 1000;
+        _isLoading = false;
       });
     }
+  }
+
+  /// Lida com a ação de "puxar para atualizar".
+  Future<void> _handleRefresh() async {
+    await _loadProfileStats();
   }
 
   @override
@@ -317,21 +354,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Expanded(child: _buildStatItem('350', 'Atividades')),
+                        Expanded(
+                          child:
+                              _isLoading // Adicionado
+                              ? const Center(child: CircularProgressIndicator())
+                              : _buildStatItem(
+                                  _activitiesCount.toString(),
+                                  'Atividades',
+                                ),
+                        ),
                         VerticalDivider(
                           color: colors.text.withOpacity(0.12),
                           thickness: 1,
                           indent: 10, // Adiciona espaçamento vertical
                           endIndent: 10,
                         ),
-                        Expanded(child: _buildStatItem('2.5K', 'Km Rodados')),
+                        Expanded(
+                          child:
+                              _isLoading // Adicionado
+                              ? const Center(child: CircularProgressIndicator())
+                              : _buildStatItem(
+                                  _totalDistanceKm.toStringAsFixed(1),
+                                  'Km Rodados',
+                                ),
+                        ),
                         VerticalDivider(
                           color: colors.text.withOpacity(0.12),
                           thickness: 1,
                           indent: 10,
                           endIndent: 10,
                         ),
-                        Expanded(child: _buildStatItem('120', 'Conquistas')),
+                        Expanded(child: _buildStatItem('0', 'Conquistas')),
                       ],
                     ),
                   ),

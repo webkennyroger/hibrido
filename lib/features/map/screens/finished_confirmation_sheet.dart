@@ -216,42 +216,54 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
       backgroundColor: colors.background,
       builder: (BuildContext context) {
         return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: Icon(Icons.image, color: colors.text),
-                title: Text(
-                  'Foto da Galeria',
-                  style: TextStyle(color: colors.text),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                _buildMediaSourceOption(
+                  context,
+                  Icons.photo_camera,
+                  'Câmera',
+                  () {
+                    _pickMedia(ImageSource.camera, isVideo: false);
+                    Navigator.of(context).pop();
+                  },
                 ),
-                onTap: () {
+                _buildMediaSourceOption(context, Icons.image, 'Foto', () {
                   _pickMedia(ImageSource.gallery, isVideo: false);
                   Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.videocam, color: colors.text),
-                title: Text(
-                  'Vídeo da Galeria',
-                  style: TextStyle(color: colors.text),
-                ),
-                onTap: () {
+                }),
+                _buildMediaSourceOption(context, Icons.videocam, 'Vídeo', () {
                   _pickMedia(ImageSource.gallery, isVideo: true);
                   Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.photo_camera, color: colors.text),
-                title: Text('Câmera', style: TextStyle(color: colors.text)),
-                onTap: () {
-                  _pickMedia(ImageSource.camera, isVideo: false);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
+                }),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  /// Constrói um botão de opção para a seleção de fonte de mídia.
+  Widget _buildMediaSourceOption(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
+    final colors = AppColors.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: colors.text, size: 32),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(color: colors.text)),
+        ],
+      ),
     );
   }
 
@@ -832,7 +844,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   /// NOVO: Card para adicionar nova foto.
   Widget _buildAddMediaCard() {
     return GestureDetector(
-      onTap: () => _pickMedia(ImageSource.gallery, isVideo: false),
+      onTap: () => _showMediaSourceActionSheet(context),
       child: DottedBorder(
         color: AppColors.success,
         strokeWidth: 2,
@@ -1286,6 +1298,7 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     Color? iconColor,
   }) {
     final colors = AppColors.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: onTap,
@@ -1320,7 +1333,9 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                     child: Text(
                       value,
                       style: GoogleFonts.lexend(
-                        color: AppColors.dark().background,
+                        color: isDarkMode
+                            ? AppColors.primary
+                            : colors.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
