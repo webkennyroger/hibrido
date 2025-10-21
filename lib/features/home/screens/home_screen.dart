@@ -6,6 +6,7 @@ import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
+import 'package:hibrido/features/notifications/screens/notifications_screen.dart';
 import 'package:hibrido/features/settings/screens/account_settings_screen.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:hibrido/services/spotify_service.dart';
@@ -239,27 +240,59 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ],
         ),
-        // Botão de Configurações
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AccountSettingsScreen(),
+        // Ícones de Ação (Notificação e Configurações)
+        Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Icon(Icons.notifications_none, color: colors.text),
               ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5),
-              ],
             ),
-            child: Icon(Icons.settings, color: colors.text),
-          ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AccountSettingsScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Icon(Icons.settings, color: colors.text),
+              ),
+            ),
+          ],
         ),
       ],
     );

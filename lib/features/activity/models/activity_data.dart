@@ -14,6 +14,7 @@ class ActivityData {
   final double calories;
   int likes;
   bool isLiked; // Estado de curtida do usuário local
+  final int points;
   List<String> commentsList;
   final int shares;
   final String privacy;
@@ -36,6 +37,7 @@ class ActivityData {
     required this.calories,
     required this.likes,
     this.isLiked = false,
+    int? points,
     List<String>? commentsList,
     required this.shares,
     this.privacy = 'public',
@@ -44,7 +46,8 @@ class ActivityData {
     this.mood,
     this.mediaPaths = const [],
     this.mapType = 'normal',
-  }) : commentsList = commentsList ?? [];
+  }) : this.points = points ?? (distanceInMeters / 100).round(),
+       commentsList = commentsList ?? [];
 
   // Método para criar uma cópia do objeto com alguns valores alterados.
   ActivityData copyWith({
@@ -62,6 +65,7 @@ class ActivityData {
     int? likes,
     bool? isLiked,
     List<String>? commentsList,
+    int? points,
     List<String>? mediaPaths,
     String? mapType,
   }) {
@@ -78,6 +82,7 @@ class ActivityData {
       calories: calories ?? this.calories,
       likes: likes ?? this.likes,
       isLiked: isLiked ?? this.isLiked,
+      points: points ?? this.points,
       commentsList: commentsList ?? this.commentsList,
       shares: this.shares, // Preserva os compartilhamentos originais
       privacy: privacy ?? this.privacy,
@@ -99,12 +104,13 @@ class ActivityData {
       'location': location,
       'sport': sport,
       'distanceInMeters': distanceInMeters,
-      'durationInMilliseconds': duration.inMilliseconds,
+      'durationInSeconds': duration.inSeconds,
       'routePoints': routePoints
           .map((point) => {'lat': point.latitude, 'lng': point.longitude})
           .toList(),
       'calories': calories,
       'likes': likes,
+      'points': points,
       'isLiked': isLiked,
       'commentsList': commentsList,
       'shares': shares,
@@ -130,7 +136,7 @@ class ActivityData {
       location: json['location'] ?? 'Localização desconhecida',
       sport: json['sport'] ?? 'Corrida', // Valor padrão para atividades antigas
       distanceInMeters: (json['distanceInMeters'] as num?)?.toDouble() ?? 0.0,
-      duration: Duration(milliseconds: json['durationInMilliseconds'] ?? 0),
+      duration: Duration(seconds: json['durationInSeconds'] ?? 0),
       routePoints: (json['routePoints'] as List? ?? [])
           .map(
             (point) => LatLng(
@@ -142,6 +148,7 @@ class ActivityData {
       calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
       likes: json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
+      points: json['points'] ?? ((json['distanceInMeters'] ?? 0) / 100).round(),
       commentsList: List<String>.from(json['commentsList'] ?? []),
       shares: json['shares'] ?? 0,
       privacy: json['privacy'] ?? 'public',

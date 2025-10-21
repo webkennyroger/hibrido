@@ -12,6 +12,8 @@ android {
 
     // Este é o bloco de configuração CORRETO e ÚNICO.
     compileOptions {
+        // Habilita o suporte para APIs de linguagem mais recentes (necessário para flutter_local_notifications)
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -57,6 +59,8 @@ android {
 dependencies {
     // Adiciona a dependência explícita para o módulo do Spotify SDK
     implementation(project(":spotify-app-remote"))
+    // Adiciona a biblioteca de desugaring
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 
 flutter {

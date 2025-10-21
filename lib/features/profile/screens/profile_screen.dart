@@ -8,7 +8,7 @@ import 'package:hibrido/features/profile/screens/edit_profile_screen.dart';
 import 'package:hibrido/features/activity/screens/activity_screen.dart';
 import 'package:hibrido/features/challenges/screens/challenges_screen.dart';
 import 'package:hibrido/features/settings/screens/account_settings_screen.dart';
-// Certifique-se de que este caminho está correto
+import 'package:hibrido/features/statistics/stats_screen.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/custom_colors.dart';
@@ -110,6 +110,18 @@ class ProfileScreenState extends State<ProfileScreen>
                   ),
                   child: Column(
                     children: [
+                      _buildOptionCard(
+                        label: 'Minhas Estatísticas',
+                        icon: Icons.directions_run_rounded,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StatsScreen(),
+                            ),
+                          );
+                        },
+                      ),
                       _buildOptionCard(
                         label: 'Minhas Atividades',
                         icon: Icons.directions_run_rounded,
@@ -287,7 +299,7 @@ class ProfileScreenState extends State<ProfileScreen>
               children: [
                 // BOTÃO DE VOLTAR E ÍCONE DE CONFIGURAÇÃO/EDIÇÃO
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     GestureDetector(
                       onTap: () async {
@@ -305,9 +317,8 @@ class ProfileScreenState extends State<ProfileScreen>
                         }
                       },
                       child: const Icon(
-                        Icons.edit_note,
-                        color: Colors
-                            .white, // Mantido branco para contraste com o fundo escurecido
+                        Icons.edit_note_rounded,
+                        color: AppColors.primary,
                         size: 30,
                       ),
                     ),

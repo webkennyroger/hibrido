@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:hibrido/features/activity/models/activity_data.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Uma classe de repositório para gerenciar o armazenamento e a recuperação
@@ -77,4 +78,67 @@ class ActivityRepository {
         .map((jsonString) => ActivityData.fromJson(jsonDecode(jsonString)))
         .toList();
   }
+
+  /// Calcula estatísticas agregadas de todas as atividades.
+  Future<AggregatedStats> calculateAggregatedStats() async {
+    final activities = await getActivities();
+    double totalDistance = 0;
+    double totalDurationSeconds = 0;
+    int totalPoints = 0;
+
+    for (var activity in activities) {
+      totalDistance += activity.distanceInMeters;
+      totalDurationSeconds += activity.duration.inSeconds;
+      totalPoints += activity.points;
+    }
+
+    final weeklyDistances = List.filled(7, 0.0);
+    final today = DateTime.now();
+
+    for (var activity in activities) {
+      final difference = today.difference(activity.createdAt).inDays;
+      if (difference >= 0 && difference < 7) {
+        // O índice 6 é hoje, 5 é ontem, etc.
+        weeklyDistances[6 - difference] += activity.distanceInMeters / 1000.0;
+      }
+    }
+
+    return AggregatedStats(
+      activityCount: activities.length,
+      totalDistanceKm: totalDistance / 1000,
+      totalHours: totalDurationSeconds / 3600,
+      totalPoints: totalPoints,
+      weeklyDistances: weeklyDistances,
+    );
+  }
+
+  /// Retorna uma lista com as abreviações dos últimos 7 dias.
+  List<String> getLast7DaysAbbreviated() {
+    final days = <String>[];
+    final today = DateTime.now();
+    final formatter = DateFormat('E', 'pt_BR'); // 'E' para dia da semana curto
+
+    for (int i = 6; i >= 0; i--) {
+      final day = today.subtract(Duration(days: i));
+      days.add(formatter.format(day));
+    }
+    return days;
+  }
+}
+
+/// Modelo para armazenar as estatísticas agregadas.
+class AggregatedStats {
+  final int activityCount;
+  final double totalDistanceKm;
+  final double totalHours;
+  final int totalPoints;
+  final List<double> weeklyDistances;
+
+  AggregatedStats({
+    required this.activityCount,
+    required this.totalDistanceKm,
+    required this.totalHours,
+    required this.totalPoints,
+    required this.weeklyDistances,
+  });
 }

@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <application
         android:label="hibrido"
         android:name="${applicationName}"
@@ -25,6 +27,11 @@
             </intent-filter>
 
         </activity>
+        <!-- Adicionado para flutter_local_notifications -->
+        <meta-data
+            android:name="flutterNotificationIcon"
+            android:resource="@mipmap/ic_launcher" />
+        <!-- Fim da adição para flutter_local_notifications -->
         <meta-data android:name="com.google.android.geo.API_KEY"
                    android:value="AIzaSyCka52TrH3u26pUrTyRwKkogWB-FdWA2bU"/>
         <meta-data
@@ -32,9 +39,9 @@
             android:value="2" />
     </application>
     <queries>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
-        </intent>
+        <!-- Permite que o app consulte a instalação do Spotify -->
+        <package android:name="com.spotify.music" />
+        <!-- Permite que o app consulte a instalação do YouTube Music -->
+        <package android:name="com.google.android.apps.youtube.music" />
     </queries>
 </manifest>

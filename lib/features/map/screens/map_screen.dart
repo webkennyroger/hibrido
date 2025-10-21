@@ -16,6 +16,7 @@ import 'package:hibrido/features/map/screens/sport_selection_button.dart';
 import 'package:hibrido/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hibrido/services/spotify_service.dart';
+import 'package:hibrido/services/notification_service.dart'; // Importar o serviço de notificação
 import 'package:spotify_sdk/spotify_sdk.dart';
 
 class MapScreen extends StatefulWidget {
@@ -97,6 +98,9 @@ class _MapScreenState extends State<MapScreen> {
   // Posição do player de música na tela (para arrastar).
   Offset _playerOffset = const Offset(16, 450);
 
+  // Serviço de notificação
+  final NotificationService _notificationService = NotificationService();
+
   // Opção de tipo de mapa selecionada pelo usuário na interface.
   MapTypeOption _selectedMapType = MapTypeOption.normal;
   // Controla a visibilidade do seletor de tipos de mapa.
@@ -117,6 +121,7 @@ class _MapScreenState extends State<MapScreen> {
     _listenToGpsStatusChanges();
     _initializeMap();
     _listenToSpotifyPlayerState(); // Garante que o app ouça o Spotify desde o início
+    _notificationService.init(); // Inicializa o serviço de notificação
   }
 
   @override
@@ -508,6 +513,12 @@ class _MapScreenState extends State<MapScreen> {
           _activityState = ActivityState.running;
           _stopwatch.start();
           _startTimer();
+          // NOVO: Notificação de início de atividade
+          _notificationService.showNotification(
+            id: 1,
+            title: 'Atividade Iniciada!',
+            body: 'Sua ${_getSportLabel(_selectedSport)} começou.',
+          );
           _startTrackingLocation(resume: false);
           break;
         case ActivityState.running:
@@ -515,6 +526,12 @@ class _MapScreenState extends State<MapScreen> {
           _stopwatch.stop();
           _timer?.cancel();
           _positionStreamSubscription?.pause();
+          // NOVO: Notificação de atividade pausada
+          _notificationService.showNotification(
+            id: 2,
+            title: 'Atividade Pausada',
+            body: 'Sua ${_getSportLabel(_selectedSport)} está em pausa.',
+          );
           break;
         case ActivityState.paused:
           _activityState = ActivityState.running;
@@ -522,6 +539,12 @@ class _MapScreenState extends State<MapScreen> {
           _startTimer();
           _startTrackingLocation(resume: true);
           break;
+          // NOVO: Notificação de atividade retomada
+          _notificationService.showNotification(
+            id: 3,
+            title: 'Atividade Retomada',
+            body: 'Sua ${_getSportLabel(_selectedSport)} foi retomada.',
+          );
         case ActivityState.finished:
           break;
       }
@@ -584,6 +607,12 @@ class _MapScreenState extends State<MapScreen> {
 
     // 4. Se o resultado do Navigator.push for 'true' (atividade salva), fecha a MapScreen.
     if (mounted && (result as bool? ?? false)) {
+      // NOVO: Notificação de atividade finalizada
+      _notificationService.showNotification(
+        id: 4,
+        title: 'Atividade Finalizada!',
+        body: 'Sua ${_getSportLabel(_selectedSport)} foi concluída com sucesso.',
+      );
       Navigator.of(context).pop(true);
     }
   }
