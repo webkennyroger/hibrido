@@ -9,6 +9,12 @@ class AppColors {
   static const Color warning = Color(0xFFFFA600); // Laranja para avisos
   static const Color info = Color(0xFF0077B6); // Azul para informações
 
+  static const Color blue1 = Color(0xFF0A0E59);
+  static const Color blue2 = Color(0xFF056CF2);
+  static const Color blue3 = Color(0xFF1B8EF2);
+  static const Color blue4 = Color(0xFF50D4F2);
+  static const Color green1 = Color(0xFFA7F235);
+
   // Cores que se adaptam ao tema (claro/escuro).
   final Color background; // Cor de fundo principal da tela
   final Color surface; // Cor de fundo para componentes como cards, barras
