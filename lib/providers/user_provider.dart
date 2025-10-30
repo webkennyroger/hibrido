@@ -25,6 +25,9 @@ class UserProvider extends ChangeNotifier {
       height: prefs.getString('userHeight') ?? '183',
       weight: prefs.getString('userWeight') ?? '85',
       imagePath: 'assets/images/running.png', // Asset padrão
+      avatarUrl:
+          prefs.getString('userAvatarUrl') ??
+          'https://i.ibb.co/L8Gj18j/avatar.png', // Adiciona a URL do avatar
       selectedImageFile: _loadImageFile(prefs.getString('userImagePath')),
     );
     notifyListeners();
@@ -49,6 +52,10 @@ class UserProvider extends ChangeNotifier {
     await prefs.setString('userLocation', newUser.location);
     await prefs.setString('userHeight', newUser.height);
     await prefs.setString('userWeight', newUser.weight);
+    await prefs.setString(
+      'userAvatarUrl',
+      newUser.avatarUrl,
+    ); // Salva a URL do avatar
     if (newUser.selectedImageFile != null) {
       await prefs.setString('userImagePath', newUser.selectedImageFile!.path);
     } else {

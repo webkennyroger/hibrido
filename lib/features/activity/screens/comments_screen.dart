@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
+import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/core/utils/map_utils.dart';
 import 'package:hibrido/providers/user_provider.dart';
@@ -12,6 +13,8 @@ import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart'
     as ConfirmationSheet;
 import 'package:hibrido/widgets/full_screen_media_viewer.dart';
+import 'comment_widget.dart';
+import 'package:hibrido/services/activity_service.dart';
 
 // Modelo mock para parceiros (reutilizado da tela de confirmação)
 class Partner {
@@ -26,6 +29,27 @@ class Liker {
   Liker({required this.name, required this.avatarUrl});
 }
 
+// NOVO: Modelo para um comentário, para incluir mais detalhes.
+class Comment {
+  final String id;
+  final String userId;
+  final String userName;
+  final String userAvatarUrl;
+  final String text;
+  final DateTime timestamp;
+  final List<Comment> replies;
+
+  Comment({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.userAvatarUrl,
+    required this.text,
+    required this.timestamp,
+    this.replies = const [],
+  });
+}
+
 class CommentsScreen extends StatefulWidget {
   final ActivityData activityData;
 
@@ -37,16 +61,15 @@ class CommentsScreen extends StatefulWidget {
 class _CommentsScreenState extends State<CommentsScreen> {
   final TextEditingController _commentController = TextEditingController();
   GoogleMapController? _mapController;
-  bool _isPostButtonEnabled = false;
   final ActivityRepository _repository = ActivityRepository();
+  late ActivityData _activityData; // NOVO: Estado local da atividade
+  final FocusNode _commentFocusNode = FocusNode();
 
-  // Mock data para a lista de quem curtiu (para fins de design)
-  final List<Liker> _likers = [
-    Liker(name: 'Você', avatarUrl: 'https://i.ibb.co/L8Gj18j/avatar.png'),
-    Liker(name: 'Maria Oliveira', avatarUrl: 'https://i.pravatar.cc/150?img=2'),
-    Liker(name: 'Carlos Souza', avatarUrl: 'https://i.pravatar.cc/150?img=3'),
-    Liker(name: 'Ana Pereira', avatarUrl: 'https://i.pravatar.cc/150?img=4'),
-  ];
+  // NOVO: Rastreia o comentário que está sendo respondido.
+  Comment? _replyingToComment;
+
+  // NOVO: Lista de comentários com mais detalhes (simulada por enquanto)
+  final List<Comment> _comments = [];
 
   // Lista de parceiros mock para demonstração.
   final List<Partner> _mockPartners = [
@@ -70,18 +93,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
   @override
   void initState() {
     super.initState();
-    // Ouve as mudanças no campo de texto para habilitar/desabilitar o botão "Postar".
-    _commentController.addListener(() {
-      setState(() {
-        _isPostButtonEnabled = _commentController.text.trim().isNotEmpty;
-      });
-    });
+    // A lista de comentários (_comments) agora começará vazia.
+    _activityData = widget.activityData; // Inicializa o estado local
   }
 
   @override
   void dispose() {
     _commentController.dispose();
     _mapController?.dispose();
+    _commentFocusNode.dispose();
     super.dispose();
   }
 
@@ -89,22 +109,63 @@ class _CommentsScreenState extends State<CommentsScreen> {
   void _postComment() {
     if (_commentController.text.trim().isEmpty) return;
 
-    // Cria uma nova lista de comentários adicionando o novo.
-    final _comments = List<String>.from(widget.activityData.commentsList)
-      ..add(_commentController.text.trim());
+    final user = context.read<UserProvider>().user;
+    final newComment = Comment(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: user.id,
+      userName: user.name,
+      userAvatarUrl: user.avatarUrl,
+      text: _commentController.text.trim(),
+      timestamp: DateTime.now(),
+    );
 
-    // Atualiza a atividade com a nova lista de comentários.
-    final updatedActivity = widget.activityData.copyWith(
-      commentsList: _comments,
+    setState(() {
+      if (_replyingToComment != null) {
+        // Adiciona como uma resposta
+        final parentCommentIndex = _comments.indexWhere(
+          (c) => c.id == _replyingToComment!.id,
+        );
+        if (parentCommentIndex != -1) {
+          _comments[parentCommentIndex].replies.add(newComment);
+        }
+        _replyingToComment = null; // Reseta o estado de resposta
+      } else {
+        // Adiciona como um comentário principal
+        _comments.add(newComment);
+      }
+    });
+
+    // TODO: A lógica de persistência precisa ser atualizada para lidar com respostas aninhadas.
+    // A estrutura atual de `commentsList` (uma lista de strings) não suporta isso.
+    // Por enquanto, a UI será atualizada, mas as respostas não serão salvas permanentemente.
+    /*
+    final updatedActivity = _activityData.copyWith(
+      commentsList: _comments.map((c) => c.text).toList(),
     );
     _repository.updateActivity(updatedActivity);
+    _activityData = updatedActivity; // Atualiza o estado local
+    */
 
     _commentController.clear();
     FocusScope.of(context).unfocus(); // Esconde o teclado
+  }
 
-    // Força a reconstrução da UI para mostrar o novo comentário.
-    // O ideal seria que a tela pai passasse um callback de atualização.
-    setState(() {});
+  // NOVO: Função para formatar o tempo em 'há X tempo'
+  String _formatTimeAgo(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays > 7) {
+      return DateFormat('dd/MM/yyyy').format(timestamp);
+    } else if (difference.inDays > 0) {
+      return 'há ${difference.inDays}d';
+    } else if (difference.inHours > 0) {
+      return 'há ${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return 'há ${difference.inMinutes}m';
+    } else {
+      return 'agora';
+    }
   }
 
   // --- Funções Auxiliares de Formatação ---
@@ -179,24 +240,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: _isPostButtonEnabled
-                ? () {
-                    _postComment();
-                  }
-                : null,
-            child: Text(
-              'Postar',
-              style: GoogleFonts.lexend(
-                color: _isPostButtonEnabled
-                    ? AppColors.success
-                    : Colors.grey.shade400,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+        actions: const [], // Botão "Postar" removido do AppBar
       ),
       body: Column(
         children: [
@@ -221,7 +265,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  widget.activityData.userName,
+                                  _activityData.userName,
                                   style: GoogleFonts.lexend(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -229,9 +273,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  _formatActivityDate(
-                                    widget.activityData.createdAt,
-                                  ),
+                                  _formatActivityDate(_activityData.createdAt),
                                   style: GoogleFonts.lexend(
                                     color: colors.textSecondary,
                                     fontSize: 12,
@@ -243,7 +285,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          widget.activityData.activityTitle,
+                          _activityData.activityTitle,
                           style: GoogleFonts.lexend(
                             fontWeight: FontWeight.bold,
                             fontSize: 22,
@@ -251,11 +293,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           ),
                         ),
                         // NOVO: Anotações/Descrição da atividade
-                        if (widget.activityData.notes != null &&
-                            widget.activityData.notes!.isNotEmpty) ...[
+                        if (_activityData.notes != null &&
+                            _activityData.notes!.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           Text(
-                            widget.activityData.notes!,
+                            _activityData.notes!,
                             style: GoogleFonts.lexend(
                               color: colors.textSecondary,
                               fontSize: 14,
@@ -264,7 +306,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           ),
                         ],
                         // Seção de Humor (Emoji)
-                        if (widget.activityData.mood != null) ...[
+                        if (_activityData.mood != null) ...[
                           const SizedBox(height: 16),
                           _buildMoodDisplay(colors),
                         ],
@@ -278,18 +320,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
                             borderRadius: BorderRadius.circular(15),
                             child: GoogleMap(
                               mapType: _mapTypeFromString(
-                                widget.activityData.mapType,
+                                _activityData.mapType,
                               ),
                               onMapCreated: (controller) {
                                 _mapController = controller;
-                                if (widget
-                                    .activityData
-                                    .routePoints
-                                    .isNotEmpty) {
+                                if (_activityData.routePoints.isNotEmpty) {
                                   _mapController?.animateCamera(
                                     CameraUpdate.newLatLngBounds(
                                       LatLngBoundsUtils.fromLatLngList(
-                                        widget.activityData.routePoints,
+                                        _activityData.routePoints,
                                       ),
                                       50.0,
                                     ),
@@ -297,16 +336,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                 }
                               },
                               initialCameraPosition: CameraPosition(
-                                target:
-                                    widget.activityData.routePoints.isNotEmpty
-                                    ? widget.activityData.routePoints.first
+                                target: _activityData.routePoints.isNotEmpty
+                                    ? _activityData.routePoints.first
                                     : const LatLng(0, 0),
                                 zoom: 15,
                               ),
                               polylines: {
                                 Polyline(
                                   polylineId: const PolylineId('route'),
-                                  points: widget.activityData.routePoints,
+                                  points: _activityData.routePoints,
                                   color: AppColors.primary,
                                   width: 4,
                                 ),
@@ -319,18 +357,20 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           ),
                         ),
                         // NOVO: Seção de Mídia (fotos e vídeos)
-                        if (widget.activityData.mediaPaths.isNotEmpty) ...[
+                        if (_activityData.mediaPaths.isNotEmpty) ...[
                           const SizedBox(height: 16),
                           _buildMediaSection(),
                         ],
                         // NOVO: Linha com informações sociais (Parceiros e Curtidas)
                         _buildSocialInfoRow(colors),
+                        const SizedBox(height: 16),
+                        _buildActionButtons(colors), // Botões de Ação
                         const SizedBox(height: 12),
                         Divider(height: 1, color: colors.text.withOpacity(0.1)),
                       ],
                     ),
                   ),
-                  widget.activityData.commentsList.isEmpty
+                  _comments.isEmpty
                       ? const Padding(
                           padding: EdgeInsets.symmetric(vertical: 80.0),
                           child: Center(
@@ -344,18 +384,19 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           padding: const EdgeInsets.all(16),
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: widget.activityData.commentsList.length,
+                          itemCount: _comments.length,
                           itemBuilder: (context, index) {
-                            return ListTile(
-                              leading: const CircleAvatar(
-                                backgroundImage: NetworkImage(
-                                  'https://i.ibb.co/L8Gj18j/avatar.png',
-                                ),
-                              ),
-                              title: Text(
-                                widget.activityData.commentsList[index],
-                                style: TextStyle(color: colors.text),
-                              ),
+                            final comment = _comments[index];
+                            return CommentWidget(
+                              comment: comment,
+                              timeAgo: _formatTimeAgo(comment.timestamp),
+                              onReply: (commentToReply) {
+                                setState(() {
+                                  _replyingToComment = commentToReply;
+                                });
+                                // Foca no campo de texto para o usuário digitar a resposta.
+                                _commentFocusNode.requestFocus();
+                              },
                             );
                           },
                         ),
@@ -364,31 +405,94 @@ class _CommentsScreenState extends State<CommentsScreen> {
             ),
           ),
           // Área de digitação do comentário na parte inferior.
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border(
-                top: BorderSide(color: colors.text.withOpacity(0.12)),
-              ),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(radius: 18, backgroundImage: user.profileImage),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    style: TextStyle(color: colors.text),
-                    decoration: InputDecoration(
-                      hintText: 'Adicione um comentário...',
-                      hintStyle: TextStyle(color: colors.textSecondary),
-                      border: InputBorder.none,
-                    ),
-                    maxLines: null,
-                  ),
+          SafeArea(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                border: Border(
+                  top: BorderSide(color: colors.text.withOpacity(0.12)),
                 ),
-              ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // NOVO: Indicador de que está respondendo a um comentário
+                  if (_replyingToComment != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Respondendo a ${_replyingToComment!.userName}',
+                            style: TextStyle(color: colors.textSecondary),
+                          ),
+                          GestureDetector(
+                            onTap: () =>
+                                setState(() => _replyingToComment = null),
+                            child: Icon(
+                              Icons.close,
+                              color: colors.textSecondary,
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundImage: user.profileImage,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _commentController,
+                          focusNode: _commentFocusNode,
+                          style: TextStyle(color: colors.text),
+                          decoration: InputDecoration(
+                            hintText: _replyingToComment == null
+                                ? 'Adicione um comentário...'
+                                : 'Adicione uma resposta...',
+                            hintStyle: TextStyle(color: colors.textSecondary),
+                            filled: true,
+                            fillColor: colors.background,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          maxLines: null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Botão de enviar
+                      InkWell(
+                        onTap: _postComment,
+                        customBorder: const CircleBorder(),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: AppColors.success,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_upward,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -402,9 +506,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
     final List<String> moodLabels = ['Dolorido', 'Mau', 'Ok', 'Bom', 'Otimo'];
 
     // Garante que o índice de humor seja válido.
-    if (widget.activityData.mood == null ||
-        widget.activityData.mood! < 0 ||
-        widget.activityData.mood! >= moodEmojis.length) {
+    if (_activityData.mood == null ||
+        _activityData.mood! < 0 ||
+        _activityData.mood! >= moodEmojis.length) {
       return const SizedBox.shrink(); // Não mostra nada se o humor for inválido.
     }
 
@@ -463,14 +567,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   /// Constrói a linha de estatísticas da atividade.
   Widget _buildStatsRow(AppColors colors) {
-    final distance = (widget.activityData.distanceInMeters / 1000)
-        .toStringAsFixed(2);
-    final duration = _formatDuration(widget.activityData.duration);
+    final distance = (_activityData.distanceInMeters / 1000).toStringAsFixed(2);
+    final duration = _formatDuration(_activityData.duration);
     final speed = _formatSpeed(
-      widget.activityData.distanceInMeters,
-      widget.activityData.duration,
+      _activityData.distanceInMeters,
+      _activityData.duration,
     );
-    final calories = widget.activityData.calories.toStringAsFixed(0);
+    final calories = _activityData.calories.toStringAsFixed(0);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -558,7 +661,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       height: 100,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        children: widget.activityData.mediaPaths.map((path) {
+        children: _activityData.mediaPaths.map((path) {
           final isVideo = [
             '.mp4',
             '.mov',
@@ -624,11 +727,107 @@ class _CommentsScreenState extends State<CommentsScreen> {
     );
   }
 
+  /// Constrói os botões de ação (Curtir, Comentar, Compartilhar).
+  Widget _buildActionButtons(AppColors colors) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Botões de Curtir e Comentar (lado esquerdo)
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Ação de Curtir com contador
+            InkWell(
+              onTap: () {
+                final user = context.read<UserProvider>().user;
+                // Lógica para curtir/descurtir a atividade
+                final activityService = Provider.of<ActivityService>(
+                  context,
+                  listen: false,
+                );
+                activityService.toggleLike(_activityData.id, user.avatarUrl);
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 4.0,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.thumb_up_outlined,
+                      color: colors.textSecondary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_activityData.likes}',
+                      style: GoogleFonts.lexend(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Ação de Comentar com contador
+            InkWell(
+              onTap: () {
+                // Focar no campo de comentário
+                FocusScope.of(context).requestFocus(_commentFocusNode);
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 4.0,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      color: colors.textSecondary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_activityData.commentsList.length}',
+                      style: GoogleFonts.lexend(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        // Botão de Compartilhar (lado direito)
+        IconButton(
+          icon: Icon(Icons.share_outlined, color: colors.textSecondary),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    ShareActivityScreen(activityData: _activityData),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   /// Constrói a seção que mostra os parceiros marcados.
   Widget _buildPartnersSection(AppColors colors) {
     // Filtra a lista de parceiros mock para encontrar os que foram marcados.
     final taggedPartners = _mockPartners
-        .where((p) => widget.activityData.taggedPartnerIds.contains(p.id))
+        .where((p) => _activityData.taggedPartnerIds.contains(p.id))
         .toList();
 
     if (taggedPartners.isEmpty) {
@@ -680,89 +879,29 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   /// Constrói a seção que mostra quem curtiu a atividade.
   Widget _buildLikesSection(AppColors colors) {
-    if (widget.activityData.likes <= 0) {
+    if (_activityData.likes <= 0) {
       return const SizedBox.shrink(); // Não mostra nada se não houver curtidas
     }
 
-    // Pega no máximo 3 avatares da lista de exemplo
-    final likersToShow = _likers.take(3).toList();
+    // Pega no máximo 3 avatares da lista de curtidas da atividade.
+    final likersToShow = _activityData.likers.take(3).toList();
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Stack para empilhar os avatares
-        SizedBox(
-          width: 32.0 + (likersToShow.length - 1) * 22.0, // Largura dinâmica
-          height: 32,
-          child: Stack(
-            children: List.generate(likersToShow.length, (index) {
-              return Positioned(
-                left: index * 22.0, // Deslocamento para empilhar
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundImage: NetworkImage(likersToShow[index].avatarUrl),
-                  // Adiciona uma borda para separar os avatares
-                  backgroundColor: colors.surface,
-                ),
-              );
-            }),
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Texto com o número total de curtidas
-        Text(
-          '${widget.activityData.likes} curtidas',
-          style: GoogleFonts.lexend(
-            color: colors.textSecondary,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Widget para exibir a mídia (imagem ou vídeo) em tela cheia.
-class FullScreenMediaViewer extends StatelessWidget {
-  final File mediaFile;
-
-  const FullScreenMediaViewer({super.key, required this.mediaFile});
-
-  @override
-  Widget build(BuildContext context) {
-    final isVideo = [
-      '.mp4',
-      '.mov',
-      '.avi',
-    ].any((ext) => mediaFile.path.toLowerCase().endsWith(ext));
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Center(
-        child: isVideo
-            ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.videocam_off, color: Colors.white, size: 60),
-                    SizedBox(height: 16),
-                    Text(
-                      'Player de vídeo ainda não implementado.',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ],
-                ),
-              )
-            : InteractiveViewer(child: Image.file(mediaFile)),
+    // Stack para empilhar os avatares
+    return SizedBox(
+      width: 32.0 + (likersToShow.length - 1) * 22.0, // Largura dinâmica
+      height: 32,
+      child: Stack(
+        children: List.generate(likersToShow.length, (index) {
+          return Positioned(
+            left: index * 22.0, // Deslocamento para empilhar
+            child: CircleAvatar(
+              radius: 16,
+              backgroundImage: NetworkImage(likersToShow[index]),
+              // Adiciona uma borda para separar os avatares
+              backgroundColor: colors.surface,
+            ),
+          );
+        }),
       ),
     );
   }

@@ -263,7 +263,9 @@ class ProfileScreenState extends State<ProfileScreen>
               image: user.profileImage,
               fit: BoxFit.cover,
               width: double.infinity,
+              height: double.infinity,
               // Adiciona uma cor de preenchimento para garantir que não haja transparência
+              color: colors.background.withOpacity(0.1),
               colorBlendMode: BlendMode.darken,
             ),
           ),
@@ -276,12 +278,12 @@ class ProfileScreenState extends State<ProfileScreen>
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: 8.0,
-                  sigmaY: 8.0,
+                  sigmaX: 10.0,
+                  sigmaY: 10.0,
                 ), // Aplica o Blur
                 child: Container(
                   // Overlay escuro semi-transparente para melhorar a legibilidade
-                  color: colors.background.withOpacity(0.4),
+                  color: colors.background.withOpacity(0.6),
                 ),
               ),
             ),
@@ -292,7 +294,7 @@ class ProfileScreenState extends State<ProfileScreen>
             padding: EdgeInsets.only(
               left: 24,
               right: 24,
-              top: MediaQuery.of(context).padding.top + 16,
+              top: MediaQuery.of(context).padding.top + 8,
               bottom: 24, // Adiciona padding na parte inferior do cabeçalho
             ),
             child: Column(
@@ -328,7 +330,7 @@ class ProfileScreenState extends State<ProfileScreen>
 
                 // IMAGEM E NOME
                 CircleAvatar(
-                  radius: 40,
+                  radius: 50,
                   backgroundImage: user.profileImage, // Usa a mesma imagem
                   backgroundColor: AppColors.primary,
                 ),

@@ -31,23 +31,21 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.5.0
-  google_fonts: ^6.3.1
+  google_fonts: ^6.3.2
   path_provider: ^2.1.5 # Manter esta versão
-  share_plus: ^7.2.2 # Pacote para funcionalidade de compartilhamento
+  share_plus: ^12.0.1
   shared_preferences: ^2.5.3
-  permission_handler: ^11.3.1
+  permission_handler: ^12.0.1
   dio: ^5.9.0
   open_file: ^3.5.10
   cupertino_icons: ^1.0.8
   table_calendar: ^3.2.0
   flutter_svg: ^2.2.1
   url_launcher: ^6.3.2 # Para abrir o link de autenticação
-  app_links: ^3.5.0 # Alternativa moderna para capturar o callback de autenticação
-  just_audio: ^0.9.36 # Para tocar o áudio da música
-  google_sign_in: ^6.2.1 
-
-  dotted_border: ^2.1.0 # Para a borda tracejada do dropzone
-  image_picker: ^1.1.2 # Para acessar a câmera e a galeria
+  app_links: ^6.4.1
+  just_audio: ^0.10.5
+  google_sign_in: ^7.2.0
+  image_picker: ^1.2.0
   google_maps_flutter: ^2.13.1
   geolocator: ^14.0.2
   flutter_localizations:
@@ -55,19 +53,19 @@ dependencies:
   spotify_sdk: ^3.0.2
   location: ^8.0.1
   provider: ^6.1.5+1
-  flutter_local_notifications: ^17.1.2 # Para notificações locais
-  gal: ^2.1.2
-  video_player: ^2.8.6
+  flutter_local_notifications: ^19.5.0
+  gal: ^2.3.2
+  video_player: ^2.10.0
 
   # Para gravação e reprodução de áudio
-  flutter_sound: ^9.2.13
-  audioplayers: ^5.2.1 # Para playback com controle de velocidade
+  flutter_sound: ^9.28.0
+  audioplayers: ^6.5.1
 
   # Para visualização de vídeo
-  chewie: ^1.7.4 # UI para o player de vídeo
+  chewie: ^1.13.0
 
   # Para seleção de arquivos (documentos, etc.)
-  file_picker: ^8.0.6
+  file_picker: ^10.3.3
 
 
 dev_dependencies:
@@ -79,7 +77,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

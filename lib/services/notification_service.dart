@@ -40,12 +40,6 @@ class NotificationService {
           requestAlertPermission: true,
           requestBadgePermission: true,
           requestSoundPermission: true,
-          onDidReceiveLocalNotification: (id, title, body, payload) {
-            // Tratamento para versões antigas do iOS
-            if (payload != null) {
-              _onNotificationTap.add(payload);
-            }
-          },
         );
 
     // Configurações gerais

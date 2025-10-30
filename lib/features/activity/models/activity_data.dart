@@ -17,6 +17,7 @@ class ActivityData {
   final int points;
   List<String> commentsList;
   final int shares;
+  final List<String> likers; // NOVO: Lista de URLs dos avatares de quem curtiu
   final String privacy;
   final String? notes;
   final List<String> taggedPartnerIds;
@@ -40,12 +41,13 @@ class ActivityData {
     int? points,
     List<String>? commentsList,
     required this.shares,
+    this.likers = const [],
     this.privacy = 'public',
     this.notes,
     this.taggedPartnerIds = const [],
     this.mood,
     this.mediaPaths = const [],
-    this.mapType = 'normal',
+    this.mapType = 'normal', // Adicione uma vírgula aqui
   }) : this.points = points ?? (distanceInMeters / 100).round(),
        commentsList = commentsList ?? [];
 
@@ -66,6 +68,7 @@ class ActivityData {
     bool? isLiked,
     List<String>? commentsList,
     int? points,
+    List<String>? likers,
     List<String>? mediaPaths,
     String? mapType,
   }) {
@@ -84,6 +87,7 @@ class ActivityData {
       isLiked: isLiked ?? this.isLiked,
       points: points ?? this.points,
       commentsList: commentsList ?? this.commentsList,
+      likers: likers ?? this.likers,
       shares: this.shares, // Preserva os compartilhamentos originais
       privacy: privacy ?? this.privacy,
       notes: notes ?? this.notes,
@@ -114,6 +118,7 @@ class ActivityData {
       'isLiked': isLiked,
       'commentsList': commentsList,
       'shares': shares,
+      'likers': likers,
       'privacy': privacy,
       'notes': notes,
       'taggedPartnerIds': taggedPartnerIds,
@@ -150,6 +155,7 @@ class ActivityData {
       isLiked: json['isLiked'] ?? false,
       points: json['points'] ?? ((json['distanceInMeters'] ?? 0) / 100).round(),
       commentsList: List<String>.from(json['commentsList'] ?? []),
+      likers: List<String>.from(json['likers'] ?? []),
       shares: json['shares'] ?? 0,
       privacy: json['privacy'] ?? 'public',
       notes: json['notes'],

@@ -8,6 +8,7 @@ class UserModel {
   String location;
   String height;
   String weight;
+  String avatarUrl;
   String? imagePath; // Caminho para a imagem local (asset)
   File? selectedImageFile; // Arquivo da nova imagem selecionada (da galeria)
 
@@ -18,6 +19,7 @@ class UserModel {
     required this.location,
     required this.height,
     required this.weight,
+    required this.avatarUrl,
     this.imagePath,
     this.selectedImageFile,
   });

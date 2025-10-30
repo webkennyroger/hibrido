@@ -1,11 +1,8 @@
-
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/core/utils/sport_utils.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
@@ -845,12 +842,11 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
   Widget _buildAddMediaCard() {
     return GestureDetector(
       onTap: () => _showMediaSourceActionSheet(context),
-      child: DottedBorder(
-        color: AppColors.success,
-        strokeWidth: 2,
-        radius: const Radius.circular(12),
-        borderType: BorderType.RRect,
-        dashPattern: const [8, 4],
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.success, width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: SizedBox(
           width: 120,
           height: 120,
@@ -1158,7 +1154,9 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
               'Visibilidade',
               _getPrivacyLabel(_selectedPrivacy),
               () => _showPrivacySelectorModal(context),
-              iconColor: _getPrivacyColor(_selectedPrivacy),
+              customIconColor: _getPrivacyColor(
+                _selectedPrivacy,
+              ), // Atualizado o local da chamada
             ),
             const SizedBox(height: 24),
             _buildInfoRow(
@@ -1295,9 +1293,11 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
     String label,
     String value,
     VoidCallback onTap, {
-    Color? iconColor,
+    Color? customIconColor, // Renomeado iconColor para customIconColor
   }) {
-    final colors = AppColors.of(context);
+    final AppColors colors = AppColors.of(
+      context,
+    ); // Explicitando o tipo para 'AppColors'
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
@@ -1306,7 +1306,11 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
         padding: const EdgeInsets.only(bottom: 24, left: 12, right: 12),
         child: Row(
           children: [
-            Icon(icon, color: iconColor ?? colors.text, size: 24),
+            Icon(
+              icon,
+              color: customIconColor ?? colors.text,
+              size: 24,
+            ), // Usando customIconColor
             const SizedBox(width: 16),
             Expanded(
               child: Text(
@@ -1318,49 +1322,56 @@ class _FinishedConfirmationSheetState extends State<FinishedConfirmationSheet> {
                 ),
               ),
             ),
-            Row(
-              children: [
-                if (label == 'Parceiros de Atividade' &&
-                    int.tryParse(value) != null)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: int.parse(value) > 0
-                          ? AppColors.primary
-                          : colors.background,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      value,
-                      style: GoogleFonts.lexend(
-                        color: isDarkMode
-                            ? AppColors.primary
-                            : colors.textSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )
-                else
-                  Text(
-                    value,
-                    style: GoogleFonts.lexend(
-                      color: (value == 'Adicionada'
-                          ? AppColors.primary
-                          : colors.text.withOpacity(0.5)),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: colors.text.withOpacity(0.26),
-                  size: 16,
-                ),
-              ],
+            // Lógica refatorada para exibir o valor ou a contagem de parceiros.
+            _buildValueDisplay(
+              label: label,
+              value: value,
+              colors: colors,
+              isDarkMode: isDarkMode,
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: colors.text.withOpacity(0.26),
+              size: 16,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Constrói a exibição do valor para a _buildInfoRow, tratando o caso especial de 'Parceiros de Atividade'.
+  Widget _buildValueDisplay({
+    required String label,
+    required String value,
+    required AppColors colors,
+    required bool isDarkMode,
+  }) {
+    final isPartnerCount =
+        label == 'Parceiros de Atividade' && int.tryParse(value) != null;
+    final partnerCount = isPartnerCount ? int.parse(value) : 0;
+
+    return Container(
+      padding: isPartnerCount ? const EdgeInsets.all(8) : null,
+      decoration: isPartnerCount
+          ? BoxDecoration(
+              color: partnerCount > 0 ? AppColors.primary : colors.background,
+              shape: BoxShape.circle,
+            )
+          : null,
+      child: Text(
+        value,
+        style: GoogleFonts.lexend(
+          color: isPartnerCount
+              ? (partnerCount > 0
+                    ? AppColors.dark().background
+                    : colors.textSecondary)
+              : (value == 'Adicionada'
+                    ? AppColors.primary
+                    : colors.text.withOpacity(0.5)),
+          fontSize: isPartnerCount ? 14 : 16,
+          fontWeight: isPartnerCount ? FontWeight.bold : FontWeight.w600,
         ),
       ),
     );

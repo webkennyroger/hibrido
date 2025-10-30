@@ -258,8 +258,8 @@ class ChallengesScreen extends StatelessWidget {
     );
   }
 
-  /// Constrói o conteúdo de placeholder para a aba 'Clubs'.
-  Widget _buildClubsContent() {
+  /// Constrói o conteúdo de placeholder para a aba 'Familia'.
+  Widget _buildFamiliaContent() {
     return const Center(
       child: Text('Conteúdo de Clubes', style: TextStyle(color: Colors.white)),
     );
@@ -268,7 +268,7 @@ class ChallengesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    // DefaultTabController gerencia o estado das abas (Conquistas, Desafios, Clubs).
+    // DefaultTabController gerencia o estado das abas (Conquistas, Desafios, Familia).
     return DefaultTabController(
       length: 3,
       // Scaffold é a estrutura principal da tela.
@@ -293,7 +293,7 @@ class ChallengesScreen extends StatelessWidget {
             tabs: const [
               Tab(text: 'Conquistas'),
               Tab(text: 'Desafios'),
-              Tab(text: 'Clubs'),
+              Tab(text: 'Familia'),
             ],
           ),
         ),
@@ -302,7 +302,7 @@ class ChallengesScreen extends StatelessWidget {
           children: [
             _buildActiveContent(context), // Conteúdo de Conquistas
             _buildChallengesContent(context), // Conteúdo de Desafios
-            _buildClubsContent(),
+            _buildFamiliaContent(),
           ],
         ),
       ),

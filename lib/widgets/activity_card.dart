@@ -5,7 +5,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hibrido/features/activity/data/activity_repository.dart';
 import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:intl/intl.dart';
-import 'package:hibrido/features/activity/screens/comments_screen.dart';
+import 'package:hibrido/features/activity/screens/comments_screen.dart'
+    as comments;
 import 'package:hibrido/features/activity/screens/share_activity_screen.dart';
 import 'package:hibrido/core/theme/custom_colors.dart';
 import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart';
@@ -155,6 +156,8 @@ class _ActivityCardState extends State<ActivityCard> {
               // Estatísticas
               _buildStats(),
               const SizedBox(height: 16),
+              // Divisor
+              Divider(height: 1, color: colors.text.withOpacity(0.1)),
               // Botões de Ação
               _buildActionButtons(context),
             ],
@@ -327,7 +330,8 @@ class _ActivityCardState extends State<ActivityCard> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CommentsScreen(activityData: widget.activityData),
+        builder: (context) =>
+            comments.CommentsScreen(activityData: widget.activityData),
       ),
     );
 
@@ -657,12 +661,19 @@ class _ActivityCardState extends State<ActivityCard> {
 
   // Lógica para curtir/descurtir
   void _toggleLike() {
+    final user = context.read<UserProvider>().user;
+    final userAvatarUrl = user.avatarUrl;
+
     setState(() {
       _isLiked = !_isLiked;
       if (_isLiked) {
         _likesCount++;
+        if (!widget.activityData.likers.contains(userAvatarUrl)) {
+          widget.activityData.likers.insert(0, userAvatarUrl);
+        }
       } else {
         _likesCount--;
+        widget.activityData.likers.remove(userAvatarUrl);
       }
     });
 
@@ -670,47 +681,48 @@ class _ActivityCardState extends State<ActivityCard> {
     final updatedActivity = widget.activityData.copyWith(
       likes: _likesCount,
       isLiked: _isLiked,
+      likers: widget.activityData.likers,
     );
     _repository.updateActivity(updatedActivity);
   }
 
   Widget _buildActionButtons(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
-          child: _actionButton(
-            _isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-            _likesCount,
-            _toggleLike,
-            isLiked: _isLiked,
-          ),
+        // Botões de Curtir e Comentar (lado esquerdo)
+        Row(
+          children: [
+            // Botão Curtir
+            _actionButton(
+              _isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+              _likesCount,
+              _toggleLike,
+              isLiked: _isLiked,
+            ),
+            const SizedBox(width: 16),
+            // Botão Comentar
+            _actionButton(
+              Icons.chat_bubble_outline,
+              _commentsCount,
+              () => _navigateToDetails(context),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _actionButton(
-            Icons.comment_outlined,
-            _commentsCount,
-            () => _navigateToDetails(context),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _actionButton(
-            Icons.share_outlined,
-            widget.activityData.shares,
-            () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.9,
-                  child: ShareActivityScreen(activityData: widget.activityData),
-                ),
-              );
-            },
-          ),
+        // Botão de Compartilhar (lado direito)
+        IconButton(
+          icon: Icon(Icons.share_outlined, color: colors.textSecondary),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    ShareActivityScreen(activityData: widget.activityData),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -726,90 +738,26 @@ class _ActivityCardState extends State<ActivityCard> {
 
     return InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isLiked ? AppColors.primary : colors.text.withOpacity(0.3),
-            width: 1.5,
-          ),
-        ),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
               color: isLiked ? AppColors.primary : colors.textSecondary,
-              size: 22,
+              size: 20,
             ),
             const SizedBox(width: 6),
             Text(
               count.toString(),
               style: GoogleFonts.lexend(
                 color: isLiked ? AppColors.primary : colors.textSecondary,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// NOVO: Widget para exibir a mídia (imagem ou vídeo) em tela cheia.
-class FullScreenMediaViewer extends StatelessWidget {
-  final File? mediaFile;
-  final String? imageUrl;
-
-  const FullScreenMediaViewer({super.key, this.mediaFile, this.imageUrl})
-    : assert(
-        mediaFile != null || imageUrl != null,
-        'É necessário fornecer mediaFile ou imageUrl',
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final isVideo =
-        mediaFile != null &&
-        [
-          '.mp4',
-          '.mov',
-          '.avi',
-        ].any((ext) => mediaFile!.path.toLowerCase().endsWith(ext));
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Center(
-        child: isVideo
-            ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.videocam_off, color: Colors.white, size: 60),
-                    SizedBox(height: 16),
-                    Text(
-                      'Player de vídeo ainda não implementado.',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ],
-                ),
-              )
-            : InteractiveViewer(
-                child: mediaFile != null
-                    ? Image.file(mediaFile!)
-                    : Image.network(imageUrl!),
-              ),
       ),
     );
   }

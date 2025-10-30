@@ -264,6 +264,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   height: _heightController.text.trim(),
                   weight: _weightController.text.trim(),
                   selectedImageFile: _selectedImage,
+                  avatarUrl: widget.user.avatarUrl, // Mantém a URL do avatar
                   imagePath: widget.user.imagePath, // Mantém o asset original
                 );
                 // NOVO: Atualiza o usuário através do provider

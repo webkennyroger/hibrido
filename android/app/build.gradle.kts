@@ -59,8 +59,8 @@ android {
 dependencies {
     // Adiciona a dependência explícita para o módulo do Spotify SDK
     implementation(project(":spotify-app-remote"))
-    // Adiciona a biblioteca de desugaring
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    // Adiciona a biblioteca de desugaring (atualizado para 2.1.4 conforme exigido por flutter_local_notifications)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
