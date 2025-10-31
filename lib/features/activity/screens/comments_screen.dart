@@ -13,7 +13,7 @@ import 'package:hibrido/features/activity/models/activity_data.dart';
 import 'package:hibrido/features/map/screens/finished_confirmation_sheet.dart'
     as ConfirmationSheet;
 import 'package:hibrido/widgets/full_screen_media_viewer.dart';
-import 'comment_widget.dart';
+import 'package:hibrido/features/activity/screens/comment_widget.dart';
 import 'package:hibrido/services/activity_service.dart';
 
 // Modelo mock para parceiros (reutilizado da tela de confirmação)
@@ -38,6 +38,8 @@ class Comment {
   final String text;
   final DateTime timestamp;
   final List<Comment> replies;
+  int likes;
+  bool isLiked;
 
   Comment({
     required this.id,
@@ -46,8 +48,10 @@ class Comment {
     required this.userAvatarUrl,
     required this.text,
     required this.timestamp,
-    this.replies = const [],
-  });
+    List<Comment>? replies,
+    this.likes = 0, // Mantido para UI, mas não será salvo
+    this.isLiked = false,
+  }) : replies = replies ?? [];
 }
 
 class CommentsScreen extends StatefulWidget {
@@ -93,8 +97,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
   @override
   void initState() {
     super.initState();
-    // A lista de comentários (_comments) agora começará vazia.
-    _activityData = widget.activityData; // Inicializa o estado local
+    _loadActivityData();
+  }
+
+  /// Carrega os dados da atividade e seus comentários.
+  void _loadActivityData() {
+    _activityData = widget.activityData;
+    _comments.clear(); // Limpa a lista antes de carregar
+    _comments.addAll(ActivityService.parseComments(_activityData.commentsList));
+    if (mounted) setState(() {});
   }
 
   @override
@@ -114,20 +125,22 @@ class _CommentsScreenState extends State<CommentsScreen> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       userId: user.id,
       userName: user.name,
-      userAvatarUrl: user.avatarUrl,
+      userAvatarUrl: user.profileImage is FileImage
+          ? (user.profileImage as FileImage).file.path
+          : (user.profileImage is NetworkImage
+                ? (user.profileImage as NetworkImage).url
+                : user.avatarUrl),
       text: _commentController.text.trim(),
+      // O número de curtidas (likes) começará em 0 por padrão, conforme definido no construtor do Comment.
       timestamp: DateTime.now(),
     );
 
     setState(() {
       if (_replyingToComment != null) {
         // Adiciona como uma resposta
-        final parentCommentIndex = _comments.indexWhere(
-          (c) => c.id == _replyingToComment!.id,
-        );
-        if (parentCommentIndex != -1) {
-          _comments[parentCommentIndex].replies.add(newComment);
-        }
+        // Encontra o comentário pai na lista e adiciona a resposta a ele.
+        // Isso garante que a alteração seja feita no objeto que será salvo.
+        _replyingToComment?.replies.add(newComment);
         _replyingToComment = null; // Reseta o estado de resposta
       } else {
         // Adiciona como um comentário principal
@@ -135,16 +148,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
       }
     });
 
-    // TODO: A lógica de persistência precisa ser atualizada para lidar com respostas aninhadas.
-    // A estrutura atual de `commentsList` (uma lista de strings) não suporta isso.
-    // Por enquanto, a UI será atualizada, mas as respostas não serão salvas permanentemente.
-    /*
+    // Converte a lista de objetos Comment para uma lista de strings JSON.
+    final List<String> newCommentsList = _comments
+        .map((comment) => ActivityService.commentToJson(comment))
+        .toList();
+
     final updatedActivity = _activityData.copyWith(
-      commentsList: _comments.map((c) => c.text).toList(),
+      // Salva a lista de strings JSON na atividade.
+      // Isso persiste os comentários principais e suas respostas.
+      commentsList: newCommentsList,
     );
     _repository.updateActivity(updatedActivity);
     _activityData = updatedActivity; // Atualiza o estado local
-    */
 
     _commentController.clear();
     FocusScope.of(context).unfocus(); // Esconde o teclado
@@ -370,36 +385,50 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       ],
                     ),
                   ),
-                  _comments.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 80.0),
-                          child: Center(
-                            child: Text(
-                              'Seja o primeiro a comentar!',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _comments.length,
-                          itemBuilder: (context, index) {
-                            final comment = _comments[index];
-                            return CommentWidget(
-                              comment: comment,
-                              timeAgo: _formatTimeAgo(comment.timestamp),
-                              onReply: (commentToReply) {
-                                setState(() {
-                                  _replyingToComment = commentToReply;
-                                });
-                                // Foca no campo de texto para o usuário digitar a resposta.
-                                _commentFocusNode.requestFocus();
+                  // --- Seção de Comentários ---
+                  RefreshIndicator(
+                    onRefresh: () async {
+                      // Simula um recarregamento (em um app real, buscaria do servidor)
+                      // Aqui, apenas recarregamos os dados locais.
+                      _loadActivityData();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _comments.isEmpty
+                          ? _buildEmptyComments(colors)
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _comments.length,
+                              itemBuilder: (context, index) {
+                                final comment = _comments[index];
+                                return CommentWidget(
+                                  comment: comment,
+                                  formatTimeAgo: _formatTimeAgo,
+                                  onReply: (commentToReply) {
+                                    // Adia a solicitação de foco para o próximo frame,
+                                    // garantindo que o setState tenha sido processado.
+                                    Future.delayed(
+                                      const Duration(milliseconds: 50),
+                                      () {
+                                        setState(() {
+                                          _replyingToComment = commentToReply;
+                                        });
+                                        _commentFocusNode.requestFocus();
+                                      },
+                                    );
+                                  },
+                                );
                               },
-                            );
-                          },
-                        ),
+                              separatorBuilder: (context, index) => Divider(
+                                color: colors.text.withOpacity(0.1),
+                                height: 24,
+                              ),
+                            ), // Fim do ListView.separated
+                    ), // Fim do Padding
+                  ),
+                  // Espaço extra no final para não colar no campo de texto
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -496,6 +525,29 @@ class _CommentsScreenState extends State<CommentsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Constrói a mensagem para quando não há comentários.
+  Widget _buildEmptyComments(AppColors colors) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 80.0),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.forum_outlined, color: colors.textSecondary, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Seja o primeiro a comentar!',
+              style: GoogleFonts.lexend(
+                color: colors.textSecondary,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
